@@ -1,0 +1,542 @@
+/**
+ * Kinboni Core Plugin Custom CSS
+ */
+
+/* ==========================================================================
+   GLOBAL DESKTOP CONTAINER WIDTH: 1440PX
+   ========================================================================== */
+.max-w-7xl {
+  max-width: 1440px !important;
+}
+
+.elementor-section.elementor-section-boxed > .elementor-container,
+.e-con-boxed,
+.e-con--boxed,
+.e-con-boxed > .e-con-inner,
+.e-con--boxed > .e-con-inner,
+.elementor-container {
+  max-width: 1440px !important;
+}
+
+/* Drawer animations */
+#cart-drawer,
+#wishlist-drawer {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Delivery zone active card */
+.delivery-zone-option.active {
+  border-color: #C99E2C !important;
+  background-color: rgba(201, 158, 44, 0.08) !important;
+  box-shadow: 0 0 0 1px #C99E2C !important;
+}
+
+/* Shimmer animation */
+@keyframes kinboni-shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.kinboni-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  animation: kinboni-shimmer 1.8s infinite;
+}
+
+/* Contact Form 7 Luxury Styling for Kinboni Atelier */
+.kinboni-cf7-wrap .wpcf7-form p {
+  margin-bottom: 1rem;
+}
+
+.kinboni-cf7-wrap .wpcf7-form-control-wrap {
+  display: block;
+  width: 100%;
+  position: relative;
+}
+
+.kinboni-cf7-wrap .wpcf7-text,
+.kinboni-cf7-wrap .wpcf7-email,
+.kinboni-cf7-wrap .wpcf7-tel,
+.kinboni-cf7-wrap .wpcf7-number,
+.kinboni-cf7-wrap .wpcf7-date,
+.kinboni-cf7-wrap .wpcf7-select,
+.kinboni-cf7-wrap .wpcf7-textarea {
+  width: 100% !important;
+  padding: 0.75rem 1rem !important;
+  border-radius: 0.75rem !important;
+  border: 1px solid #d6d3d1 !important;
+  background-color: #fafaf9 !important;
+  color: #1c1917 !important;
+  font-size: 0.8125rem !important;
+  line-height: 1.25rem !important;
+  outline: none !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+  font-family: inherit !important;
+  box-sizing: border-box !important;
+}
+
+.dark .kinboni-cf7-wrap .wpcf7-text,
+.dark .kinboni-cf7-wrap .wpcf7-email,
+.dark .kinboni-cf7-wrap .wpcf7-tel,
+.dark .kinboni-cf7-wrap .wpcf7-number,
+.dark .kinboni-cf7-wrap .wpcf7-date,
+.dark .kinboni-cf7-wrap .wpcf7-select,
+.dark .kinboni-cf7-wrap .wpcf7-textarea {
+  border-color: #44403c !important;
+  background-color: #0c0a09 !important;
+  color: #f5f5f4 !important;
+}
+
+.kinboni-cf7-wrap .wpcf7-text:focus,
+.kinboni-cf7-wrap .wpcf7-email:focus,
+.kinboni-cf7-wrap .wpcf7-tel:focus,
+.kinboni-cf7-wrap .wpcf7-number:focus,
+.kinboni-cf7-wrap .wpcf7-date:focus,
+.kinboni-cf7-wrap .wpcf7-select:focus,
+.kinboni-cf7-wrap .wpcf7-textarea:focus {
+  border-color: #C99E2C !important;
+  box-shadow: 0 0 0 1px #C99E2C !important;
+}
+
+.kinboni-cf7-wrap label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #292524;
+  margin-bottom: 0.375rem;
+}
+
+.dark .kinboni-cf7-wrap label {
+  color: #e7e5e4;
+}
+
+.kinboni-cf7-wrap .wpcf7-submit {
+  width: 100% !important;
+  padding: 1rem 1.5rem !important;
+  background-color: #eab308 !important;
+  color: #0c0a09 !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  border-radius: 0.75rem !important;
+  border: none !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  transition: all 0.2s ease !important;
+  margin-top: 0.5rem !important;
+  display: block !important;
+}
+
+.kinboni-cf7-wrap .wpcf7-submit:hover {
+  background-color: #ca8a04 !important;
+}
+
+.kinboni-cf7-wrap .wpcf7-submit:active {
+  transform: scale(0.99) !important;
+}
+
+.kinboni-cf7-wrap .wpcf7-not-valid-tip {
+  color: #f43f5e !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  margin-top: 0.25rem !important;
+  display: block !important;
+}
+
+.kinboni-cf7-wrap .wpcf7-response-output {
+  border-radius: 0.75rem !important;
+  padding: 0.75rem 1rem !important;
+  margin: 1rem 0 0 0 !important;
+  font-size: 0.8125rem !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+  border-width: 1px !important;
+}
+
+.kinboni-cf7-wrap .wpcf7 form.sent .wpcf7-response-output {
+  border-color: #10b981 !important;
+  background-color: rgba(16, 185, 129, 0.1) !important;
+  color: #065f46 !important;
+}
+
+.dark .kinboni-cf7-wrap .wpcf7 form.sent .wpcf7-response-output {
+  color: #6ee7b7 !important;
+}
+
+.kinboni-cf7-wrap .wpcf7 form.failed .wpcf7-response-output,
+.kinboni-cf7-wrap .wpcf7 form.aborted .wpcf7-response-output,
+.kinboni-cf7-wrap .wpcf7 form.invalid .wpcf7-response-output {
+  border-color: #f43f5e !important;
+  background-color: rgba(244, 63, 94, 0.1) !important;
+  color: #9f1239 !important;
+}
+
+.dark .kinboni-cf7-wrap .wpcf7 form.invalid .wpcf7-response-output {
+  color: #fda4af !important;
+}
+
+.kinboni-cf7-wrap .wpcf7-spinner {
+  margin: 0.75rem auto 0 auto !important;
+  display: block !important;
+  background-color: #C99E2C !important;
+}
+
+
+/* ==========================================================================
+   Kinboni Gold Palette & Utility Fallbacks
+   Ensures custom gold-* classes and core modal/drawer states work across themes
+   ========================================================================== */
+:root {
+  --kinboni-accent-gold: #D4AF37;
+}
+.hidden { display: none !important; }
+.bg-gold-400 { background-color: #eab308; }
+.bg-gold-500 { background-color: #D4AF37; }
+.hover\:bg-gold-400:hover { background-color: #eab308; }
+.hover\:bg-gold-500:hover { background-color: #C99E2C; }
+.text-gold-400 { color: #facc15; }
+.text-gold-500 { color: #D4AF37; }
+.text-gold-600 { color: #C99E2C; }
+.text-gold-700 { color: #a16207; }
+.border-gold-400 { border-color: #facc15; }
+.border-gold-500 { border-color: #D4AF37; }
+.fill-gold-500 { fill: #D4AF37; }
+
+/* ==========================================================================
+   Hero Banner Slider & Showcase (Ponnokino Dual-Banner Layout)
+   Responsive Heights & Zero-Gap Image Geometry
+   ========================================================================== */
+.hero-slider-box,
+.hero-right-box {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mobile (< 640px): Natural 16:9 aspect ratio, zero gap */
+@media (max-width: 639px) {
+  .hero-slider-box {
+    height: auto !important;
+    aspect-ratio: 16 / 9 !important;
+    min-height: 180px !important;
+  }
+  .hero-right-box {
+    height: auto !important;
+    aspect-ratio: 16 / 9 !important;
+    min-height: 180px !important;
+  }
+}
+
+/* Tablet (640px - 1023px): Natural 16:8 aspect ratio, zero gap */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .hero-slider-box {
+    height: auto !important;
+    aspect-ratio: 16 / 8 !important;
+    min-height: 260px !important;
+  }
+  .hero-right-box {
+    height: auto !important;
+    aspect-ratio: 16 / 8 !important;
+    min-height: 260px !important;
+  }
+}
+
+/* Desktop (>= 1024px): Full luxury hero showcase height */
+@media (min-width: 1024px) {
+  .hero-slider-box,
+  .hero-right-box {
+    height: 430px;
+    min-height: 430px;
+  }
+}
+
+/* Enforce 100% width and height on all Swiper slides and images to prevent any bottom gap */
+.hero-banner-swiper {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.hero-banner-swiper .swiper-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.hero-banner-swiper .swiper-slide {
+  width: 100% !important;
+  height: 100% !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.hero-banner-inner {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 0 !important;
+  font-size: 0 !important;
+}
+
+.hero-slider-box img.hero-banner-img,
+.hero-right-box img.hero-banner-img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  vertical-align: middle !important;
+  transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-banner-pagination {
+  position: absolute;
+  bottom: 14px !important;
+  left: 0;
+  width: 100% !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  z-index: 25 !important;
+  pointer-events: auto;
+}
+
+.hero-banner-pagination .swiper-pagination-bullet {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  background: #ffffff;
+  opacity: 0.6;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  margin: 0 !important;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.hero-banner-pagination .swiper-pagination-bullet-active {
+  width: 24px;
+  opacity: 1;
+  background: #ea580c !important;
+  border-radius: 9999px;
+  box-shadow: 0 2px 6px rgba(234, 88, 12, 0.4);
+}
+
+.hero-banner-prev,
+.hero-banner-next {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+.hero-slider-box:hover .hero-banner-prev,
+.hero-slider-box:hover .hero-banner-next {
+  opacity: 1;
+}
+
+/* ==========================================================================
+   Trust Badges - Light & Dark Mode High-Contrast Rules
+   ========================================================================== */
+.hero-trust-badge-card {
+  background-color: #ffffff;
+  border-color: #f3f4f6;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 0.22s ease;
+}
+
+.hero-trust-badge-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.08);
+}
+
+.hero-trust-badge-card .hero-badge-title {
+  color: #1c1917;
+}
+
+.hero-trust-badge-card .hero-badge-subtitle {
+  color: #78716c;
+}
+
+.hero-trust-badge-icon {
+  background-color: rgba(234, 88, 12, 0.1);
+  color: #ea580c;
+  transition: transform 0.22s ease, background-color 0.22s ease;
+}
+
+.hero-trust-badge-card:hover .hero-trust-badge-icon {
+  transform: scale(1.06);
+}
+
+/* Dark Mode Card, Text & Icon Overrides with High Specificity */
+.dark .hero-trust-badge-card,
+html.dark .hero-trust-badge-card,
+body.dark .hero-trust-badge-card,
+[data-theme="dark"] .hero-trust-badge-card {
+  background-color: #1c1917 !important;
+  border-color: #292524 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+}
+
+.dark .hero-trust-badge-card:hover,
+html.dark .hero-trust-badge-card:hover,
+body.dark .hero-trust-badge-card:hover,
+[data-theme="dark"] .hero-trust-badge-card:hover {
+  border-color: #ea580c !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .hero-trust-badge-card .hero-badge-title,
+html.dark .hero-trust-badge-card .hero-badge-title,
+body.dark .hero-trust-badge-card .hero-badge-title,
+[data-theme="dark"] .hero-trust-badge-card .hero-badge-title {
+  color: #f5f5f4 !important;
+}
+
+.dark .hero-trust-badge-card .hero-badge-subtitle,
+html.dark .hero-trust-badge-card .hero-badge-subtitle,
+body.dark .hero-trust-badge-card .hero-badge-subtitle,
+[data-theme="dark"] .hero-trust-badge-card .hero-badge-subtitle {
+  color: #a8a29e !important;
+}
+
+.dark .hero-trust-badge-icon,
+html.dark .hero-trust-badge-icon,
+body.dark .hero-trust-badge-icon,
+[data-theme="dark"] .hero-trust-badge-icon {
+  background-color: rgba(234, 88, 12, 0.2) !important;
+  color: #fb923c !important;
+}
+
+/* Mobile Menu Slide-Out Drawer Animation & Backdrop */
+#mobile-menu-drawer {
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#mobile-menu-backdrop {
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ==========================================================================
+   PRODUCT CARDS IMAGE CONTAINER & ASPECT RATIO (4:5)
+   Guarantees perfect image aspect-ratio across all browsers & devices
+   ========================================================================== */
+.aspect-\[4\/5\],
+[class*="aspect-[4/5]"],
+.kinboni-product-card .aspect-\[4\/5\],
+.kinboni-bestseller-card .aspect-\[4\/5\] {
+  aspect-ratio: 4 / 5 !important;
+  position: relative !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  display: block !important;
+  background-color: #f5f5f4;
+}
+
+.dark .aspect-\[4\/5\],
+.dark [class*="aspect-[4/5]"],
+.dark .kinboni-product-card .aspect-\[4\/5\],
+.dark .kinboni-bestseller-card .aspect-\[4\/5\] {
+  background-color: #0c0a09 !important;
+}
+
+.kinboni-product-card img,
+.kinboni-bestseller-card img,
+.aspect-\[4\/5\] > img,
+[class*="aspect-[4/5]"] > img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  display: block !important;
+}
+
+/* Fallback for legacy browsers without native CSS aspect-ratio */
+@supports not (aspect-ratio: 4 / 5) {
+  .kinboni-product-card .aspect-\[4\/5\],
+  .kinboni-bestseller-card .aspect-\[4\/5\],
+  .aspect-\[4\/5\] {
+    height: 0 !important;
+    padding-top: 125% !important; /* 5 / 4 = 1.25 = 125% */
+  }
+
+  .kinboni-product-card .aspect-\[4\/5\] > img,
+  .kinboni-bestseller-card .aspect-\[4\/5\] > img,
+  .aspect-\[4\/5\] > img {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+  }
+}
+
+/* Suppress WooCommerce default inline 'View cart' text link on product cards */
+.added_to_cart,
+a.added_to_cart,
+.woocommerce a.added_to_cart,
+.kinboni-product-card .added_to_cart,
+.products .added_to_cart {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+}
+
+/* Wishlist Heart Icon Visibility in Light & Dark Mode */
+.btn-toggle-wishlist {
+  color: #44403c !important;
+}
+
+.dark .btn-toggle-wishlist,
+[data-theme="dark"] .btn-toggle-wishlist,
+html.dark .btn-toggle-wishlist {
+  color: #f5f5f4 !important;
+}
+
+.btn-toggle-wishlist svg {
+  display: block;
+  stroke: currentColor !important;
+  fill: none;
+  transition: transform 0.2s ease, fill 0.2s ease, stroke 0.2s ease, color 0.2s ease;
+}
+
+.btn-toggle-wishlist:hover,
+.btn-toggle-wishlist:hover svg {
+  color: #f43f5e !important;
+  stroke: #f43f5e !important;
+}
+
+.btn-toggle-wishlist.active,
+.btn-toggle-wishlist.active svg,
+.btn-toggle-wishlist svg.fill-rose-500,
+.btn-toggle-wishlist svg.stroke-rose-500 {
+  color: #f43f5e !important;
+  stroke: #f43f5e !important;
+  fill: #f43f5e !important;
+}
+
+
