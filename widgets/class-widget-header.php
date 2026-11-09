@@ -21,6 +21,7 @@ if (!defined('ABSPATH')) {
 
 use Elementor\Widget_Base;
 use Elementor\Controls_Manager;
+use Elementor\Repeater;
 use Elementor\Group_Control_Typography;
 use Elementor\Group_Control_Box_Shadow;
 
@@ -337,6 +338,434 @@ class Kinboni_Widget_Header extends Widget_Base {
         $this->end_controls_section();
 
         // ==========================================
+        // CONTENT TAB: SEARCH POPUP & MODAL
+        // ==========================================
+        $this->start_controls_section(
+            'section_search_modal_controls',
+            array(
+                'label'     => esc_html__('Search Popup & Modal', 'kinboni-core'),
+                'tab'       => Controls_Manager::TAB_CONTENT,
+                'condition' => array('show_search' => 'yes'),
+            )
+        );
+
+        $this->add_control(
+            'search_action_type',
+            array(
+                'label'   => esc_html__('Click Action', 'kinboni-core'),
+                'type'    => Controls_Manager::SELECT,
+                'default' => 'modal',
+                'options' => array(
+                    'modal' => esc_html__('Open Live Ajax Popup Modal', 'kinboni-core'),
+                    'url'   => esc_html__('Redirect to Page URL', 'kinboni-core'),
+                ),
+            )
+        );
+
+        $this->add_control(
+            'search_custom_url',
+            array(
+                'label'       => esc_html__('Search Target URL', 'kinboni-core'),
+                'type'        => Controls_Manager::URL,
+                'placeholder' => esc_html__('https://your-site.com/shop', 'kinboni-core'),
+                'condition'   => array('search_action_type' => 'url'),
+            )
+        );
+
+        $this->add_control(
+            'search_modal_placeholder',
+            array(
+                'label'       => esc_html__('Modal Input Placeholder', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'label_block' => true,
+                'default'     => esc_html__('Search by timepiece, leather, fragrance, gold, silk...', 'kinboni-core'),
+                'condition'   => array('search_action_type' => 'modal'),
+            )
+        );
+
+        $this->add_control(
+            'search_results_heading',
+            array(
+                'label'       => esc_html__('Results Header Label', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('Live Atelier Search', 'kinboni-core'),
+                'condition'   => array('search_action_type' => 'modal'),
+            )
+        );
+
+        $this->add_control(
+            'search_show_suggestions',
+            array(
+                'label'        => esc_html__('Show Quick Suggestions', 'kinboni-core'),
+                'type'         => Controls_Manager::SWITCHER,
+                'label_on'     => esc_html__('Yes', 'kinboni-core'),
+                'label_off'    => esc_html__('No', 'kinboni-core'),
+                'return_value' => 'yes',
+                'default'      => 'yes',
+                'condition'    => array('search_action_type' => 'modal'),
+            )
+        );
+
+        $this->add_control(
+            'search_suggestions_label',
+            array(
+                'label'       => esc_html__('Suggestions Label', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('Suggestions:', 'kinboni-core'),
+                'condition'   => array(
+                    'search_action_type'      => 'modal',
+                    'search_show_suggestions' => 'yes',
+                ),
+            )
+        );
+
+        $search_suggestions_repeater = new Repeater();
+
+        $search_suggestions_repeater->add_control(
+            'tag_label',
+            array(
+                'label'       => esc_html__('Display Label', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('Timepieces', 'kinboni-core'),
+                'label_block' => true,
+            )
+        );
+
+        $search_suggestions_repeater->add_control(
+            'tag_query',
+            array(
+                'label'       => esc_html__('Search Query', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('Timepiece', 'kinboni-core'),
+                'label_block' => true,
+            )
+        );
+
+        $this->add_control(
+            'search_suggestions_list',
+            array(
+                'label'       => esc_html__('Suggestion Pills', 'kinboni-core'),
+                'type'        => Controls_Manager::REPEATER,
+                'fields'      => $search_suggestions_repeater->get_controls(),
+                'title_field' => '{{{ tag_label }}}',
+                'default'     => array(
+                    array('tag_label' => 'Timepieces', 'tag_query' => 'Timepiece'),
+                    array('tag_label' => 'Leather Goods', 'tag_query' => 'Leather'),
+                    array('tag_label' => 'Oud & Fragrance', 'tag_query' => 'Oud'),
+                    array('tag_label' => 'Silk & Cashmere', 'tag_query' => 'Silk'),
+                ),
+                'condition'   => array(
+                    'search_action_type'      => 'modal',
+                    'search_show_suggestions' => 'yes',
+                ),
+            )
+        );
+
+        $this->end_controls_section();
+
+        // ==========================================
+        // CONTENT TAB: SHOPPING BAG DRAWER
+        // ==========================================
+        $this->start_controls_section(
+            'section_cart_drawer_controls',
+            array(
+                'label'     => esc_html__('Shopping Bag Drawer', 'kinboni-core'),
+                'tab'       => Controls_Manager::TAB_CONTENT,
+                'condition' => array('show_cart' => 'yes'),
+            )
+        );
+
+        $this->add_control(
+            'cart_action_type',
+            array(
+                'label'   => esc_html__('Click Action', 'kinboni-core'),
+                'type'    => Controls_Manager::SELECT,
+                'default' => 'drawer',
+                'options' => array(
+                    'drawer' => esc_html__('Open Slide-out Bag Drawer', 'kinboni-core'),
+                    'url'    => esc_html__('Redirect to Cart Page', 'kinboni-core'),
+                ),
+            )
+        );
+
+        $this->add_control(
+            'cart_drawer_title',
+            array(
+                'label'       => esc_html__('Drawer Title', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('Shopping Bag', 'kinboni-core'),
+                'condition'   => array('cart_action_type' => 'drawer'),
+            )
+        );
+
+        $this->add_control(
+            'cart_show_shipping',
+            array(
+                'label'        => esc_html__('Show Free Shipping Status', 'kinboni-core'),
+                'type'         => Controls_Manager::SWITCHER,
+                'label_on'     => esc_html__('Yes', 'kinboni-core'),
+                'label_off'    => esc_html__('No', 'kinboni-core'),
+                'return_value' => 'yes',
+                'default'      => 'yes',
+                'condition'    => array('cart_action_type' => 'drawer'),
+            )
+        );
+
+        $this->add_control(
+            'cart_free_shipping_threshold',
+            array(
+                'label'       => esc_html__('Free Shipping Threshold (৳)', 'kinboni-core'),
+                'type'        => Controls_Manager::NUMBER,
+                'default'     => 2500,
+                'condition'   => array(
+                    'cart_action_type'   => 'drawer',
+                    'cart_show_shipping' => 'yes',
+                ),
+            )
+        );
+
+        $this->add_control(
+            'cart_shipping_label',
+            array(
+                'label'       => esc_html__('Shipping Label', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('Express White-Glove Shipping', 'kinboni-core'),
+                'condition'   => array(
+                    'cart_action_type'   => 'drawer',
+                    'cart_show_shipping' => 'yes',
+                ),
+            )
+        );
+
+        $this->add_control(
+            'cart_shipping_free_text',
+            array(
+                'label'       => esc_html__('Complimentary Text', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('COMPLIMENTARY', 'kinboni-core'),
+                'condition'   => array(
+                    'cart_action_type'   => 'drawer',
+                    'cart_show_shipping' => 'yes',
+                ),
+            )
+        );
+
+        $this->add_control(
+            'cart_shipping_calc_text',
+            array(
+                'label'       => esc_html__('Under Threshold Text', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('Calculated at Checkout', 'kinboni-core'),
+                'condition'   => array(
+                    'cart_action_type'   => 'drawer',
+                    'cart_show_shipping' => 'yes',
+                ),
+            )
+        );
+
+        $this->add_control(
+            'cart_empty_title',
+            array(
+                'label'       => esc_html__('Empty Bag Title', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('Your Bag is Empty', 'kinboni-core'),
+                'separator'   => 'before',
+                'condition'   => array('cart_action_type' => 'drawer'),
+            )
+        );
+
+        $this->add_control(
+            'cart_empty_desc',
+            array(
+                'label'       => esc_html__('Empty Bag Description', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXTAREA,
+                'rows'        => 3,
+                'default'     => esc_html__('Explore our curated horology and artisanal leather collections to begin your order.', 'kinboni-core'),
+                'condition'   => array('cart_action_type' => 'drawer'),
+            )
+        );
+
+        $this->add_control(
+            'cart_empty_btn_text',
+            array(
+                'label'       => esc_html__('Empty CTA Button Text', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('Explore Creations', 'kinboni-core'),
+                'condition'   => array('cart_action_type' => 'drawer'),
+            )
+        );
+
+        $this->add_control(
+            'cart_empty_btn_url',
+            array(
+                'label'       => esc_html__('Empty CTA Button URL', 'kinboni-core'),
+                'type'        => Controls_Manager::URL,
+                'placeholder' => esc_html__('https://your-site.com/shop', 'kinboni-core'),
+                'condition'   => array('cart_action_type' => 'drawer'),
+            )
+        );
+
+        $this->add_control(
+            'cart_show_quick_checkout',
+            array(
+                'label'        => esc_html__('Show Quick Checkout Button', 'kinboni-core'),
+                'type'         => Controls_Manager::SWITCHER,
+                'label_on'     => esc_html__('Yes', 'kinboni-core'),
+                'label_off'    => esc_html__('No', 'kinboni-core'),
+                'return_value' => 'yes',
+                'default'      => 'yes',
+                'separator'    => 'before',
+                'condition'    => array('cart_action_type' => 'drawer'),
+            )
+        );
+
+        $this->add_control(
+            'cart_quick_checkout_text',
+            array(
+                'label'       => esc_html__('Quick Checkout Button Text', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('Quick COD Checkout Modal', 'kinboni-core'),
+                'condition'   => array(
+                    'cart_action_type'         => 'drawer',
+                    'cart_show_quick_checkout' => 'yes',
+                ),
+            )
+        );
+
+        $this->add_control(
+            'cart_show_cart_btn',
+            array(
+                'label'        => esc_html__('Show View Cart Page Button', 'kinboni-core'),
+                'type'         => Controls_Manager::SWITCHER,
+                'label_on'     => esc_html__('Yes', 'kinboni-core'),
+                'label_off'    => esc_html__('No', 'kinboni-core'),
+                'return_value' => 'yes',
+                'default'      => 'yes',
+                'condition'    => array('cart_action_type' => 'drawer'),
+            )
+        );
+
+        $this->add_control(
+            'cart_view_cart_text',
+            array(
+                'label'       => esc_html__('View Cart Button Text', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('View Cart Page', 'kinboni-core'),
+                'condition'   => array(
+                    'cart_action_type'   => 'drawer',
+                    'cart_show_cart_btn' => 'yes',
+                ),
+            )
+        );
+
+        $this->add_control(
+            'cart_show_checkout_btn',
+            array(
+                'label'        => esc_html__('Show Checkout Page Button', 'kinboni-core'),
+                'type'         => Controls_Manager::SWITCHER,
+                'label_on'     => esc_html__('Yes', 'kinboni-core'),
+                'label_off'    => esc_html__('No', 'kinboni-core'),
+                'return_value' => 'yes',
+                'default'      => 'yes',
+                'condition'    => array('cart_action_type' => 'drawer'),
+            )
+        );
+
+        $this->add_control(
+            'cart_checkout_page_text',
+            array(
+                'label'       => esc_html__('Checkout Button Text', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('Checkout Page', 'kinboni-core'),
+                'condition'   => array(
+                    'cart_action_type'       => 'drawer',
+                    'cart_show_checkout_btn' => 'yes',
+                ),
+            )
+        );
+
+        $this->end_controls_section();
+
+        // ==========================================
+        // CONTENT TAB: SAVED WISHLIST DRAWER
+        // ==========================================
+        $this->start_controls_section(
+            'section_wishlist_drawer_controls',
+            array(
+                'label'     => esc_html__('Saved Wishlist Drawer', 'kinboni-core'),
+                'tab'       => Controls_Manager::TAB_CONTENT,
+                'condition' => array('show_wishlist' => 'yes'),
+            )
+        );
+
+        $this->add_control(
+            'wishlist_action_type',
+            array(
+                'label'   => esc_html__('Click Action', 'kinboni-core'),
+                'type'    => Controls_Manager::SELECT,
+                'default' => 'drawer',
+                'options' => array(
+                    'drawer' => esc_html__('Open Slide-out Wishlist Drawer', 'kinboni-core'),
+                    'url'    => esc_html__('Redirect to Wishlist Page', 'kinboni-core'),
+                ),
+            )
+        );
+
+        $this->add_control(
+            'wishlist_drawer_title',
+            array(
+                'label'       => esc_html__('Drawer Header Title', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('Your Saved Wishlist', 'kinboni-core'),
+                'condition'   => array('wishlist_action_type' => 'drawer'),
+            )
+        );
+
+        $this->add_control(
+            'wishlist_empty_title',
+            array(
+                'label'       => esc_html__('Empty Wishlist Title', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('No Saved Creations', 'kinboni-core'),
+                'separator'   => 'before',
+                'condition'   => array('wishlist_action_type' => 'drawer'),
+            )
+        );
+
+        $this->add_control(
+            'wishlist_empty_desc',
+            array(
+                'label'       => esc_html__('Empty Description', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXTAREA,
+                'rows'        => 3,
+                'default'     => esc_html__('Click the heart icon on any creation to bookmark it for later consideration.', 'kinboni-core'),
+                'condition'   => array('wishlist_action_type' => 'drawer'),
+            )
+        );
+
+        $this->add_control(
+            'wishlist_empty_btn_text',
+            array(
+                'label'       => esc_html__('Empty CTA Button Text', 'kinboni-core'),
+                'type'        => Controls_Manager::TEXT,
+                'default'     => esc_html__('Browse Catalogue', 'kinboni-core'),
+                'condition'   => array('wishlist_action_type' => 'drawer'),
+            )
+        );
+
+        $this->add_control(
+            'wishlist_empty_btn_url',
+            array(
+                'label'       => esc_html__('Empty CTA Button URL', 'kinboni-core'),
+                'type'        => Controls_Manager::URL,
+                'placeholder' => esc_html__('https://your-site.com/shop', 'kinboni-core'),
+                'condition'   => array('wishlist_action_type' => 'drawer'),
+            )
+        );
+
+        $this->end_controls_section();
+
+        // ==========================================
         // CONTENT TAB: HEADER BEHAVIOR
         // ==========================================
         $this->start_controls_section(
@@ -416,6 +845,52 @@ class Kinboni_Widget_Header extends Widget_Base {
         );
 
         $this->end_controls_section();
+
+        // ==========================================
+        // STYLE TAB: POPUPS & DRAWERS STYLING
+        // ==========================================
+        $this->start_controls_section(
+            'section_style_drawers',
+            array(
+                'label' => esc_html__('Popups & Drawers Styling', 'kinboni-core'),
+                'tab'   => Controls_Manager::TAB_STYLE,
+            )
+        );
+
+        $this->add_control(
+            'drawer_bg_color',
+            array(
+                'label'     => esc_html__('Drawer / Modal Card Background', 'kinboni-core'),
+                'type'      => Controls_Manager::COLOR,
+                'selectors' => array(
+                    '{{WRAPPER}} #cart-drawer, {{WRAPPER}} #wishlist-drawer, {{WRAPPER}} #search-modal > div:last-child' => 'background-color: {{VALUE}};',
+                ),
+            )
+        );
+
+        $this->add_control(
+            'drawer_title_color',
+            array(
+                'label'     => esc_html__('Drawer Title Color', 'kinboni-core'),
+                'type'      => Controls_Manager::COLOR,
+                'selectors' => array(
+                    '{{WRAPPER}} #cart-drawer h3, {{WRAPPER}} #wishlist-drawer h3' => 'color: {{VALUE}};',
+                ),
+            )
+        );
+
+        $this->add_control(
+            'drawer_accent_color',
+            array(
+                'label'     => esc_html__('Primary Button Color', 'kinboni-core'),
+                'type'      => Controls_Manager::COLOR,
+                'selectors' => array(
+                    '{{WRAPPER}} #cart-checkout-btn, {{WRAPPER}} #cart-empty-state a, {{WRAPPER}} .search-suggestion-tag:hover' => 'background-color: {{VALUE}} !important;',
+                ),
+            )
+        );
+
+        $this->end_controls_section();
     }
 
     /**
@@ -433,18 +908,24 @@ class Kinboni_Widget_Header extends Widget_Base {
         $brand_url       = !empty($settings['brand_link']['url']) ? $settings['brand_link']['url'] : home_url('/');
 
         $nav_mode        = !empty($settings['nav_mode']) ? $settings['nav_mode'] : 'unified';
-        $show_dropdown   = ('yes' === $settings['show_pages_dropdown']);
+        $show_dropdown   = !isset($settings['show_pages_dropdown']) || ('yes' === $settings['show_pages_dropdown']);
         $pages_badge     = !empty($settings['pages_badge_count']) ? $settings['pages_badge_count'] : '10';
         $deals_badge     = !empty($settings['flash_deals_badge']) ? $settings['flash_deals_badge'] : '-20%';
 
-        $show_search     = ('yes' === $settings['show_search']);
+        $show_search     = !isset($settings['show_search']) || ('yes' === $settings['show_search']);
         $search_hint     = !empty($settings['search_placeholder']) ? $settings['search_placeholder'] : __('Search creations...', 'kinboni-core');
+        $search_action   = !empty($settings['search_action_type']) ? $settings['search_action_type'] : 'modal';
+        $search_page_url = !empty($settings['search_custom_url']['url']) ? $settings['search_custom_url']['url'] : (function_exists('wc_get_page_permalink') ? wc_get_page_permalink('shop') : home_url('/shop'));
+
         $show_theme      = ('yes' === $settings['show_theme_toggle']);
         $show_account    = ('yes' === $settings['show_account']);
         $show_wishlist   = ('yes' === $settings['show_wishlist']);
+        $wishlist_action = !empty($settings['wishlist_action_type']) ? $settings['wishlist_action_type'] : 'drawer';
+
         $show_cart       = ('yes' === $settings['show_cart']);
+        $cart_action     = !empty($settings['cart_action_type']) ? $settings['cart_action_type'] : 'drawer';
         $cart_label      = !empty($settings['cart_button_label']) ? $settings['cart_button_label'] : __('Bag', 'kinboni-core');
-        $show_mobile_btn = ('yes' === $settings['show_mobile_menu']);
+        $show_mobile_btn = !isset($settings['show_mobile_menu']) || ('yes' === $settings['show_mobile_menu']);
 
         // Dynamic WooCommerce page links
         $shop_url     = function_exists('wc_get_page_permalink') ? wc_get_page_permalink('shop') : home_url('/shop');
@@ -503,18 +984,18 @@ class Kinboni_Widget_Header extends Widget_Base {
           class="<?php echo esc_attr(implode(' ', $header_classes)); ?>"
         >
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-20 gap-4 sm:gap-6">
+            <div class="kinboni-header-inner flex items-center justify-between h-20 gap-4 sm:gap-6">
               
               <!-- Mobile Menu Hamburger Button -->
               <?php if ($show_mobile_btn) : ?>
-              <div class="flex items-center xl:hidden">
+              <div class="kinboni-mobile-menu-trigger flex items-center lg:hidden">
                 <button
                   id="mobile-menu-btn"
                   type="button"
                   class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 hover:bg-stone-200/60 dark:hover:bg-stone-800/60 transition-colors cursor-pointer"
                   aria-label="<?php esc_attr_e('Open mobile navigation menu', 'kinboni-core'); ?>"
                 >
-                  <i data-lucide="menu" class="w-5 h-5"></i>
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                 </button>
               </div>
               <?php endif; ?>
@@ -544,17 +1025,36 @@ class Kinboni_Widget_Header extends Widget_Base {
 
               <!-- Desktop Navigation Links -->
               <nav
-                class="hidden xl:flex items-center gap-3.5 2xl:gap-6 whitespace-nowrap"
+                class="kinboni-header-navigation hidden lg:flex items-center gap-3.5 2xl:gap-6 whitespace-nowrap"
                 aria-label="<?php esc_attr_e('Main navigation', 'kinboni-core'); ?>"
               >
-                <?php if ('wp_menu' === $nav_mode && !empty($settings['selected_wp_menu'])) : ?>
+                <?php
+                $use_wp_menu = ('wp_menu' === $nav_mode);
+                $menu_to_render = !empty($settings['selected_wp_menu']) && '0' !== $settings['selected_wp_menu'] ? $settings['selected_wp_menu'] : '';
+                if ($use_wp_menu && empty($menu_to_render)) {
+                    $locations = get_nav_menu_locations();
+                    if (!empty($locations['primary'])) {
+                        $menu_to_render = $locations['primary'];
+                    } else {
+                        $all_menus = wp_get_nav_menus();
+                        if (!empty($all_menus)) {
+                            $menu_to_render = $all_menus[0]->term_id;
+                        }
+                    }
+                }
+                ?>
+                <?php if ($use_wp_menu && !empty($menu_to_render)) : ?>
                   <?php
-                  wp_nav_menu(array(
-                      'menu'        => $settings['selected_wp_menu'],
+                  $menu_args = array(
+                      'menu'        => $menu_to_render,
                       'container'   => false,
                       'menu_class'  => 'flex items-center gap-4 xl:gap-6',
                       'fallback_cb' => false,
-                  ));
+                  );
+                  if (class_exists('Kinboni_Nav_Walker')) {
+                      $menu_args['walker'] = new Kinboni_Nav_Walker();
+                  }
+                  wp_nav_menu($menu_args);
                   ?>
                 <?php else : ?>
                   <a
@@ -784,25 +1284,43 @@ class Kinboni_Widget_Header extends Widget_Base {
               </nav>
 
               <!-- Right Action Icons (Search, Theme, Account, Wishlist, Bag) -->
-              <div class="flex items-center gap-1 sm:gap-2">
+              <div class="kinboni-header-actions flex items-center gap-1 sm:gap-2">
                 
                 <!-- Search Button -->
                 <?php if ($show_search) : ?>
-                <button
-                  type="button"
-                  class="open-search-btn hidden xl:flex items-center gap-2 pl-3.5 pr-4 py-2 whitespace-nowrap rounded-full border border-stone-300 dark:border-stone-700 text-xs text-stone-600 dark:text-stone-300 hover:border-gold-500 hover:text-gold-600 dark:hover:text-gold-400 transition-colors cursor-pointer"
-                  aria-label="<?php esc_attr_e('Search creations', 'kinboni-core'); ?>"
-                >
-                  <i data-lucide="search" class="w-3.5 h-3.5"></i>
-                  <span class="font-medium"><?php echo esc_html($search_hint); ?></span>
-                </button>
-                <button
-                  type="button"
-                  class="open-search-btn xl:hidden w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 hover:bg-stone-200/60 dark:hover:bg-stone-800/60 transition-colors cursor-pointer"
-                  aria-label="<?php esc_attr_e('Search creations', 'kinboni-core'); ?>"
-                >
-                  <i data-lucide="search" class="w-4 h-4 sm:w-5 sm:h-5"></i>
-                </button>
+                  <?php if ('modal' === $search_action) : ?>
+                  <button
+                    type="button"
+                    class="kinboni-search-desktop open-search-btn hidden md:flex items-center gap-2 pl-3.5 pr-4 py-2 whitespace-nowrap rounded-full border border-stone-300 dark:border-stone-700 text-xs text-stone-600 dark:text-stone-300 hover:border-gold-500 hover:text-gold-600 dark:hover:text-gold-400 transition-colors cursor-pointer"
+                    aria-label="<?php esc_attr_e('Search creations', 'kinboni-core'); ?>"
+                  >
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.3-4.3"></path></svg>
+                    <span class="font-medium"><?php echo esc_html($search_hint); ?></span>
+                  </button>
+                  <button
+                    type="button"
+                    class="kinboni-search-mobile open-search-btn md:hidden w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 hover:bg-stone-200/60 dark:hover:bg-stone-800/60 transition-colors cursor-pointer"
+                    aria-label="<?php esc_attr_e('Search creations', 'kinboni-core'); ?>"
+                  >
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.3-4.3"></path></svg>
+                  </button>
+                  <?php else : ?>
+                  <a
+                    href="<?php echo esc_url($search_page_url); ?>"
+                    class="kinboni-search-desktop hidden md:flex items-center gap-2 pl-3.5 pr-4 py-2 whitespace-nowrap rounded-full border border-stone-300 dark:border-stone-700 text-xs text-stone-600 dark:text-stone-300 hover:border-gold-500 hover:text-gold-600 dark:hover:text-gold-400 transition-colors cursor-pointer"
+                    aria-label="<?php esc_attr_e('Search creations', 'kinboni-core'); ?>"
+                  >
+                    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.3-4.3"></path></svg>
+                    <span class="font-medium"><?php echo esc_html($search_hint); ?></span>
+                  </a>
+                  <a
+                    href="<?php echo esc_url($search_page_url); ?>"
+                    class="kinboni-search-mobile md:hidden w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 hover:bg-stone-200/60 dark:hover:bg-stone-800/60 transition-colors cursor-pointer"
+                    aria-label="<?php esc_attr_e('Search creations', 'kinboni-core'); ?>"
+                  >
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.3-4.3"></path></svg>
+                  </a>
+                  <?php endif; ?>
                 <?php endif; ?>
 
                 <!-- Dark/Light Theme Toggle -->
@@ -836,42 +1354,340 @@ class Kinboni_Widget_Header extends Widget_Base {
 
                 <!-- Wishlist Button with Badge -->
                 <?php if ($show_wishlist) : ?>
-                <button
-                  type="button"
-                  class="open-wishlist-btn relative w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 hover:bg-stone-200/60 dark:hover:bg-stone-800/60 transition-colors cursor-pointer"
-                  aria-label="<?php esc_attr_e('View Saved Wishlist', 'kinboni-core'); ?>"
-                >
-                  <i data-lucide="heart" class="w-4 h-4 sm:w-5 sm:h-5"></i>
-                  <span
-                    class="wishlist-count-badge absolute top-0.5 right-0.5 transform scale-0 transition-transform duration-300 flex items-center justify-center min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-1 text-[11px] sm:text-xs font-bold text-white bg-rose-600 rounded-full shadow-sm"
-                  >0</span>
-                </button>
+                  <?php if ('drawer' === $wishlist_action) : ?>
+                  <button
+                    type="button"
+                    class="open-wishlist-btn relative w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 hover:bg-stone-200/60 dark:hover:bg-stone-800/60 transition-colors cursor-pointer"
+                    aria-label="<?php esc_attr_e('View Saved Wishlist', 'kinboni-core'); ?>"
+                  >
+                    <i data-lucide="heart" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                    <span
+                      class="wishlist-count-badge absolute top-0.5 right-0.5 transform scale-0 transition-transform duration-300 flex items-center justify-center min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-1 text-[11px] sm:text-xs font-bold text-white bg-rose-600 rounded-full shadow-sm"
+                    >0</span>
+                  </button>
+                  <?php else : ?>
+                  <a
+                    href="<?php echo esc_url($wishlist_url); ?>"
+                    class="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-stone-700 dark:text-stone-300 hover:text-gold-600 dark:hover:text-gold-400 hover:bg-stone-200/60 dark:hover:bg-stone-800/60 transition-colors cursor-pointer"
+                    aria-label="<?php esc_attr_e('View Saved Wishlist', 'kinboni-core'); ?>"
+                  >
+                    <i data-lucide="heart" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                    <span
+                      class="wishlist-count-badge absolute top-0.5 right-0.5 transform scale-0 transition-transform duration-300 flex items-center justify-center min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-1 text-[11px] sm:text-xs font-bold text-white bg-rose-600 rounded-full shadow-sm"
+                    >0</span>
+                  </a>
+                  <?php endif; ?>
                 <?php endif; ?>
 
                 <!-- Shopping Bag Button with Live Item Counter -->
                 <?php if ($show_cart) : ?>
-                <button
-                  type="button"
-                  class="open-cart-btn relative w-8 h-8 sm:w-auto p-0 sm:pl-3.5 sm:pr-4 sm:py-2 rounded-full bg-stone-900 dark:bg-gold-400 text-white dark:text-stone-950 hover:bg-gold-600 dark:hover:bg-gold-300 transition-all shadow-sm active:scale-95 flex items-center justify-center sm:gap-2 flex-shrink-0 cursor-pointer"
-                  aria-label="<?php esc_attr_e('Open Shopping Bag', 'kinboni-core'); ?>"
-                >
-                  <i
-                    data-lucide="shopping-bag"
-                    class="cart-badge-icon w-4 h-4 transition-transform duration-200"
-                  ></i>
-                  <span class="hidden sm:inline text-xs font-bold tracking-wide"
-                  ><?php echo esc_html($cart_label); ?></span>
-                  <span
-                    class="cart-count-badge absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 <?php echo $cart_count > 0 ? 'scale-100' : 'scale-0'; ?> transform transition-transform duration-300 flex items-center justify-center min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-[20px] px-1 text-xs font-bold text-stone-950 bg-gold-400 dark:bg-white rounded-full shadow-md"
-                  ><?php echo esc_html($cart_count); ?></span>
-                </button>
+                  <?php if ('drawer' === $cart_action) : ?>
+                  <button
+                    type="button"
+                    class="open-cart-btn relative w-8 h-8 sm:w-auto p-0 sm:pl-3.5 sm:pr-4 sm:py-2 rounded-full bg-stone-900 dark:bg-gold-400 text-white dark:text-stone-950 hover:bg-gold-600 dark:hover:bg-gold-300 transition-all shadow-sm active:scale-95 flex items-center justify-center sm:gap-2 flex-shrink-0 cursor-pointer"
+                    aria-label="<?php esc_attr_e('Open Shopping Bag', 'kinboni-core'); ?>"
+                  >
+                    <i
+                      data-lucide="shopping-bag"
+                      class="cart-badge-icon w-4 h-4 transition-transform duration-200"
+                    ></i>
+                    <span class="hidden sm:inline text-xs font-bold tracking-wide"
+                    ><?php echo esc_html($cart_label); ?></span>
+                    <span
+                      class="cart-count-badge absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 <?php echo $cart_count > 0 ? 'scale-100' : 'scale-0'; ?> transform transition-transform duration-300 flex items-center justify-center min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-[20px] px-1 text-xs font-bold text-stone-950 bg-gold-400 dark:bg-white rounded-full shadow-md"
+                    ><?php echo esc_html($cart_count); ?></span>
+                  </button>
+                  <?php else : ?>
+                  <a
+                    href="<?php echo esc_url($cart_url); ?>"
+                    class="relative w-8 h-8 sm:w-auto p-0 sm:pl-3.5 sm:pr-4 sm:py-2 rounded-full bg-stone-900 dark:bg-gold-400 text-white dark:text-stone-950 hover:bg-gold-600 dark:hover:bg-gold-300 transition-all shadow-sm active:scale-95 flex items-center justify-center sm:gap-2 flex-shrink-0 cursor-pointer"
+                    aria-label="<?php esc_attr_e('Open Shopping Bag', 'kinboni-core'); ?>"
+                  >
+                    <i
+                      data-lucide="shopping-bag"
+                      class="cart-badge-icon w-4 h-4 transition-transform duration-200"
+                    ></i>
+                    <span class="hidden sm:inline text-xs font-bold tracking-wide"
+                    ><?php echo esc_html($cart_label); ?></span>
+                    <span
+                      class="cart-count-badge absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 <?php echo $cart_count > 0 ? 'scale-100' : 'scale-0'; ?> transform transition-transform duration-300 flex items-center justify-center min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-[20px] px-1 text-xs font-bold text-stone-950 bg-gold-400 dark:bg-white rounded-full shadow-md"
+                    ><?php echo esc_html($cart_count); ?></span>
+                  </a>
+                  <?php endif; ?>
                 <?php endif; ?>
 
               </div>
             </div>
           </div>
         </header>
+
+        <?php
+        // Mark as rendered so wp_footer does not output duplicate templates
+        $GLOBALS['kinboni_header_drawers_rendered'] = true;
+
+        // Render Live Search Modal
+        if ($show_search && 'modal' === $search_action) {
+            $this->render_search_modal($settings);
+        }
+
+        // Render Shopping Bag Drawer
+        if ($show_cart && 'drawer' === $cart_action) {
+            $this->render_cart_drawer($settings, $cart_count, $cart_url, $checkout_url);
+        }
+
+        // Render Saved Wishlist Drawer
+        if ($show_wishlist && 'drawer' === $wishlist_action) {
+            $this->render_wishlist_drawer($settings);
+        }
+    }
+
+    /**
+     * Render Live Ajax Search Modal
+     */
+    protected function render_search_modal($settings) {
+        $search_placeholder = !empty($settings['search_modal_placeholder']) ? $settings['search_modal_placeholder'] : esc_html__('Search by timepiece, leather, fragrance, gold, silk...', 'kinboni-core');
+        $results_heading    = !empty($settings['search_results_heading']) ? $settings['search_results_heading'] : esc_html__('Live Atelier Search', 'kinboni-core');
+        $show_suggestions   = !isset($settings['search_show_suggestions']) || ('yes' === $settings['search_show_suggestions']);
+        $suggestions_label  = !empty($settings['search_suggestions_label']) ? $settings['search_suggestions_label'] : esc_html__('Suggestions:', 'kinboni-core');
+        $suggestions        = !empty($settings['search_suggestions_list']) ? $settings['search_suggestions_list'] : array(
+            array('tag_label' => 'Timepieces', 'tag_query' => 'Timepiece'),
+            array('tag_label' => 'Leather Goods', 'tag_query' => 'Leather'),
+            array('tag_label' => 'Oud & Fragrance', 'tag_query' => 'Oud'),
+            array('tag_label' => 'Silk & Cashmere', 'tag_query' => 'Silk'),
+        );
+        ?>
+        <!-- Kinboni Search Modal Overlay -->
+        <div id="search-modal" class="fixed inset-0 z-50 hidden flex flex-col justify-start p-4 sm:p-6 md:p-12" style="display: none;">
+          <div id="search-backdrop" class="fixed inset-0 bg-stone-950/80 backdrop-blur-md cursor-pointer"></div>
+          
+          <div class="relative w-full max-w-3xl mx-auto bg-white dark:bg-stone-900 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-800 overflow-hidden z-10 animate-slide-down">
+            
+            <!-- Search Input Header -->
+            <form action="<?php echo esc_url(home_url('/')); ?>" method="get" class="p-5 border-b border-stone-200 dark:border-stone-800 flex items-center gap-3 m-0">
+              <input type="hidden" name="post_type" value="product" />
+              <svg class="w-5 h-5 text-gold-500 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.3-4.3"></path></svg>
+              <input 
+                type="text" 
+                name="s"
+                id="search-input" 
+                placeholder="<?php echo esc_attr($search_placeholder); ?>" 
+                aria-label="<?php esc_attr_e('Search Kinboni Atelier creations', 'kinboni-core'); ?>"
+                autocomplete="off"
+                class="flex-grow bg-transparent text-stone-900 dark:text-stone-100 placeholder:text-stone-400 text-sm sm:text-base focus:outline-none"
+              />
+              <button type="button" id="close-search-btn" class="w-8 h-8 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer" aria-label="<?php esc_attr_e('Close search', 'kinboni-core'); ?>">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </form>
+
+            <!-- Quick Search Recommendations -->
+            <?php if ($show_suggestions && !empty($suggestions)) : ?>
+            <div class="px-5 py-3 bg-stone-50 dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800 flex items-center gap-2 flex-wrap text-xs">
+              <span class="text-stone-500 font-medium"><?php echo esc_html($suggestions_label); ?></span>
+              <?php foreach ($suggestions as $tag) : ?>
+                <?php
+                $t_label = !empty($tag['tag_label']) ? $tag['tag_label'] : '';
+                $t_query = !empty($tag['tag_query']) ? $tag['tag_query'] : $t_label;
+                if (empty($t_label)) {
+                    continue;
+                }
+                ?>
+                <button type="button" class="search-suggestion-tag px-3 py-1 rounded-full bg-stone-200/80 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-gold-500 hover:text-stone-950 transition-colors font-medium cursor-pointer" data-query="<?php echo esc_attr($t_query); ?>"><?php echo esc_html($t_label); ?></button>
+              <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+
+            <!-- Search Results Area -->
+            <div class="p-6 max-h-[60vh] overflow-y-auto">
+              <div class="flex items-center justify-between mb-4">
+                <span id="search-count" class="text-xs uppercase font-bold tracking-wider text-stone-500"><?php echo esc_html($results_heading); ?></span>
+              </div>
+              <div id="search-results-container">
+                <!-- Dynamically filled by SearchController -->
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <?php
+    }
+
+    /**
+     * Render Shopping Bag Slide-out Drawer
+     */
+    protected function render_cart_drawer($settings, $cart_count, $cart_url, $checkout_url) {
+        $cart_subtotal_raw  = (function_exists('WC') && WC()->cart) ? (float) WC()->cart->get_subtotal() : 0;
+        $cart_subtotal_html = (function_exists('WC') && WC()->cart) ? WC()->cart->get_cart_subtotal() : '৳0';
+        $cart_total_html    = (function_exists('WC') && WC()->cart) ? WC()->cart->get_total() : '৳0';
+
+        $drawer_title       = !empty($settings['cart_drawer_title']) ? $settings['cart_drawer_title'] : esc_html__('Shopping Bag', 'kinboni-core');
+        $show_shipping      = !isset($settings['cart_show_shipping']) || ('yes' === $settings['cart_show_shipping']);
+        $shipping_label     = !empty($settings['cart_shipping_label']) ? $settings['cart_shipping_label'] : esc_html__('Express White-Glove Shipping', 'kinboni-core');
+        $shipping_free_text = !empty($settings['cart_shipping_free_text']) ? $settings['cart_shipping_free_text'] : esc_html__('COMPLIMENTARY', 'kinboni-core');
+        $shipping_calc_text = !empty($settings['cart_shipping_calc_text']) ? $settings['cart_shipping_calc_text'] : esc_html__('Calculated at Checkout', 'kinboni-core');
+        $shipping_threshold = isset($settings['cart_free_shipping_threshold']) && '' !== $settings['cart_free_shipping_threshold'] 
+            ? (float) $settings['cart_free_shipping_threshold'] 
+            : (float) get_option('kinboni_free_shipping_threshold', 2500);
+
+        $empty_title        = !empty($settings['cart_empty_title']) ? $settings['cart_empty_title'] : esc_html__('Your Bag is Empty', 'kinboni-core');
+        $empty_desc         = !empty($settings['cart_empty_desc']) ? $settings['cart_empty_desc'] : esc_html__('Explore our curated horology and artisanal leather collections to begin your order.', 'kinboni-core');
+        $empty_btn_text     = !empty($settings['cart_empty_btn_text']) ? $settings['cart_empty_btn_text'] : esc_html__('Explore Creations', 'kinboni-core');
+        $empty_btn_url      = !empty($settings['cart_empty_btn_url']['url']) ? $settings['cart_empty_btn_url']['url'] : (function_exists('wc_get_page_permalink') ? wc_get_page_permalink('shop') : home_url('/shop'));
+
+        $show_quick_order   = !isset($settings['cart_show_quick_checkout']) || ('yes' === $settings['cart_show_quick_checkout']);
+        $quick_order_text   = !empty($settings['cart_quick_checkout_text']) ? $settings['cart_quick_checkout_text'] : esc_html__('Quick COD Checkout Modal', 'kinboni-core');
+        $show_cart_link     = !isset($settings['cart_show_cart_btn']) || ('yes' === $settings['cart_show_cart_btn']);
+        $view_cart_text     = !empty($settings['cart_view_cart_text']) ? $settings['cart_view_cart_text'] : esc_html__('View Cart Page', 'kinboni-core');
+        $show_checkout_link = !isset($settings['cart_show_checkout_btn']) || ('yes' === $settings['cart_show_checkout_btn']);
+        $checkout_text      = !empty($settings['cart_checkout_page_text']) ? $settings['cart_checkout_page_text'] : esc_html__('Checkout Page', 'kinboni-core');
+        ?>
+        <!-- Kinboni Shopping Cart Slide-out Drawer -->
+        <div id="cart-drawer-backdrop" class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300"></div>
+        <aside id="cart-drawer" class="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white dark:bg-stone-900 shadow-2xl transform translate-x-full transition-transform duration-300 ease-out flex flex-col border-l border-stone-200 dark:border-stone-800">
+          
+          <!-- Drawer Header -->
+          <div class="p-5 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="shopping-bag" class="w-5 h-5 text-gold-700 dark:text-gold-400"></i>
+              <h3 class="font-serif text-lg font-medium text-stone-900 dark:text-white"><?php echo esc_html($drawer_title); ?></h3>
+            </div>
+            <button type="button" id="close-cart-btn" class="w-8 h-8 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer" aria-label="<?php esc_attr_e('Close cart', 'kinboni-core'); ?>">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <!-- Scrollable Items Container -->
+          <div id="cart-items-container" class="flex-grow overflow-y-auto p-5 space-y-4">
+            <?php
+            if (class_exists('Kinboni_Ajax_Cart')) {
+                Kinboni_Ajax_Cart::instance()->render_drawer_items();
+            }
+            ?>
+          </div>
+
+          <!-- Empty State -->
+          <div id="cart-empty-state" class="<?php echo ($cart_count > 0) ? 'hidden ' : ''; ?>flex-grow flex flex-col items-center justify-center p-8 text-center">
+            <div class="w-16 h-16 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-400 mb-4">
+              <i data-lucide="shopping-bag" class="w-8 h-8"></i>
+            </div>
+            <h4 class="font-serif text-lg font-medium text-stone-900 dark:text-white mb-2"><?php echo esc_html($empty_title); ?></h4>
+            <p class="text-sm text-stone-600 dark:text-stone-300 max-w-xs mb-6 font-normal">
+              <?php echo esc_html($empty_desc); ?>
+            </p>
+            <a href="<?php echo esc_url($empty_btn_url); ?>" class="px-6 py-3 rounded-xl bg-gold-400 hover:bg-gold-500 text-stone-950 text-xs font-bold uppercase tracking-widest transition-all">
+              <?php echo esc_html($empty_btn_text); ?>
+            </a>
+          </div>
+
+          <!-- Drawer Footer (Subtotal & Checkout) -->
+          <div id="cart-footer" class="<?php echo ($cart_count === 0) ? 'hidden ' : ''; ?>p-5 border-t border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-950/50 space-y-4">
+
+            <!-- Price Breakdown -->
+            <div class="space-y-1.5 text-xs">
+              <div class="flex justify-between text-stone-600 dark:text-stone-400">
+                <span><?php esc_html_e('Subtotal', 'kinboni-core'); ?></span>
+                <span id="cart-subtotal" class="font-semibold text-stone-900 dark:text-white"><?php echo $cart_subtotal_html; ?></span>
+              </div>
+              <div id="cart-discount-row" class="hidden flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
+                <span><?php esc_html_e('Privilege Discount', 'kinboni-core'); ?></span>
+                <span id="cart-discount-amount">-৳0</span>
+              </div>
+              <?php if ($show_shipping) : ?>
+              <div class="flex justify-between text-stone-600 dark:text-stone-400">
+                <span><?php echo esc_html($shipping_label); ?></span>
+                <span id="cart-shipping-status" class="font-semibold <?php echo ($shipping_threshold <= 0 || $cart_subtotal_raw >= $shipping_threshold) ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-700 dark:text-stone-300'; ?>">
+                  <?php echo ($shipping_threshold <= 0 || $cart_subtotal_raw >= $shipping_threshold) ? esc_html($shipping_free_text) : esc_html($shipping_calc_text); ?>
+                </span>
+              </div>
+              <?php endif; ?>
+              <div class="flex justify-between text-base font-bold text-stone-900 dark:text-white pt-2 border-t border-stone-200 dark:border-stone-800">
+                <span><?php esc_html_e('Estimated Total', 'kinboni-core'); ?></span>
+                <span id="cart-total" class="font-serif font-bold text-lg text-gold-700 dark:text-gold-400"><?php echo $cart_total_html; ?></span>
+              </div>
+            </div>
+
+            <!-- Checkout CTA & Full Page Links -->
+            <div class="space-y-2">
+              <?php if ($show_quick_order) : ?>
+              <button 
+                id="cart-checkout-btn" 
+                type="button" 
+                class="w-full py-3.5 bg-gold-400 hover:bg-gold-500 text-stone-950 text-xs font-bold uppercase tracking-[0.15em] rounded-xl shadow-lg hover:shadow-gold-500/25 transition-all text-center flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+              >
+                <i data-lucide="zap" class="w-4 h-4 fill-stone-950"></i>
+                <span><?php echo esc_html($quick_order_text); ?></span>
+              </button>
+              <?php endif; ?>
+              <div class="grid grid-cols-2 gap-2">
+                <?php if ($show_cart_link) : ?>
+                <a 
+                  href="<?php echo esc_url($cart_url); ?>"
+                  class="w-full py-2.5 px-3 rounded-xl border border-stone-300 dark:border-stone-700 hover:border-gold-500 text-stone-800 dark:text-stone-200 text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
+                >
+                  <i data-lucide="shopping-bag" class="w-3.5 h-3.5"></i>
+                  <span><?php echo esc_html($view_cart_text); ?></span>
+                </a>
+                <?php endif; ?>
+                <?php if ($show_checkout_link) : ?>
+                <a 
+                  href="<?php echo esc_url($checkout_url); ?>"
+                  class="w-full py-2.5 px-3 rounded-xl bg-stone-900 text-white dark:bg-stone-100 dark:text-stone-950 hover:bg-gold-500 hover:text-stone-950 text-[11px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5"
+                >
+                  <i data-lucide="credit-card" class="w-3.5 h-3.5"></i>
+                  <span><?php echo esc_html($checkout_text); ?></span>
+                </a>
+                <?php endif; ?>
+              </div>
+            </div>
+
+          </div>
+        </aside>
+        <?php
+    }
+
+    /**
+     * Render Saved Wishlist Slide-out Drawer
+     */
+    protected function render_wishlist_drawer($settings) {
+        $drawer_title   = !empty($settings['wishlist_drawer_title']) ? $settings['wishlist_drawer_title'] : esc_html__('Your Saved Wishlist', 'kinboni-core');
+        $empty_title    = !empty($settings['wishlist_empty_title']) ? $settings['wishlist_empty_title'] : esc_html__('No Saved Creations', 'kinboni-core');
+        $empty_desc     = !empty($settings['wishlist_empty_desc']) ? $settings['wishlist_empty_desc'] : esc_html__('Click the heart icon on any creation to bookmark it for later consideration.', 'kinboni-core');
+        $empty_btn_text = !empty($settings['wishlist_empty_btn_text']) ? $settings['wishlist_empty_btn_text'] : esc_html__('Browse Catalogue', 'kinboni-core');
+        $empty_btn_url  = !empty($settings['wishlist_empty_btn_url']['url']) ? $settings['wishlist_empty_btn_url']['url'] : (function_exists('wc_get_page_permalink') ? wc_get_page_permalink('shop') : home_url('/shop'));
+        ?>
+        <!-- Kinboni Wishlist Slide-out Drawer -->
+        <div id="wishlist-drawer-backdrop" class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300"></div>
+        <aside id="wishlist-drawer" class="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white dark:bg-stone-900 shadow-2xl transform translate-x-full transition-transform duration-300 ease-out flex flex-col border-l border-stone-200 dark:border-stone-800">
+          
+          <div class="p-5 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="heart" class="w-5 h-5 text-rose-500"></i>
+              <h3 class="font-serif text-lg font-medium text-stone-900 dark:text-white"><?php echo esc_html($drawer_title); ?></h3>
+            </div>
+            <button type="button" id="close-wishlist-btn" class="w-8 h-8 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer" aria-label="<?php esc_attr_e('Close wishlist', 'kinboni-core'); ?>">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <!-- Wishlist Items -->
+          <div id="wishlist-items-container" class="flex-grow overflow-y-auto p-5 space-y-4">
+            <!-- Injected by WishlistController.render() -->
+          </div>
+
+          <!-- Empty Wishlist State -->
+          <div id="wishlist-empty-state" class="hidden flex-grow flex flex-col items-center justify-center p-8 text-center">
+            <div class="w-16 h-16 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-400 mb-4">
+              <i data-lucide="heart" class="w-8 h-8"></i>
+            </div>
+            <h4 class="font-serif text-lg font-medium text-stone-900 dark:text-white mb-2"><?php echo esc_html($empty_title); ?></h4>
+            <p class="text-sm text-stone-600 dark:text-stone-300 max-w-xs mb-6 font-normal">
+              <?php echo esc_html($empty_desc); ?>
+            </p>
+            <a href="<?php echo esc_url($empty_btn_url); ?>" class="px-6 py-3 rounded-xl bg-stone-900 text-white dark:bg-white dark:text-stone-900 text-xs font-bold uppercase tracking-widest transition-all">
+              <?php echo esc_html($empty_btn_text); ?>
+            </a>
+          </div>
+        </aside>
         <?php
     }
 }
-

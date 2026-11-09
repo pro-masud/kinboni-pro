@@ -49,6 +49,41 @@ $cart_count     = (function_exists('WC') && WC()->cart) ? WC()->cart->get_cart_c
       <?php esc_html_e('Navigation', 'kinboni-core'); ?>
     </span>
 
+    <?php
+    $mob_location = has_nav_menu('mobile') ? 'mobile' : (has_nav_menu('primary') ? 'primary' : '');
+    $mob_fallback = '';
+    if (!$mob_location) {
+        $available_menus = wp_get_nav_menus();
+        if (!empty($available_menus)) {
+            foreach ($available_menus as $m) {
+                if ($m->slug === 'main-menu-header' || $m->name === 'main menu header') {
+                    $mob_fallback = $m->term_id;
+                    break;
+                }
+            }
+            if (!$mob_fallback) {
+                $mob_fallback = $available_menus[0]->term_id;
+            }
+        }
+    }
+
+    if ($mob_location || $mob_fallback) {
+        $mob_args = array(
+            'container'   => false,
+            'menu_class'  => 'space-y-1 text-sm font-sans',
+            'fallback_cb' => false,
+        );
+        if (class_exists('Kinboni_Mobile_Nav_Walker')) {
+            $mob_args['walker'] = new Kinboni_Mobile_Nav_Walker();
+        }
+        if ($mob_location) {
+            $mob_args['theme_location'] = $mob_location;
+        } else {
+            $mob_args['menu'] = $mob_fallback;
+        }
+        wp_nav_menu($mob_args);
+    } else {
+    ?>
     <a href="<?php echo esc_url(home_url('/')); ?>" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl text-stone-800 dark:text-stone-200 hover:bg-gold-500/10 hover:text-gold-600 dark:hover:text-gold-400 text-sm font-semibold transition-colors">
       <span class="flex items-center gap-3">
         <i data-lucide="home" class="w-4 h-4 text-stone-500 dark:text-stone-400"></i>
@@ -96,6 +131,7 @@ $cart_count     = (function_exists('WC') && WC()->cart) ? WC()->cart->get_cart_c
       </span>
       <span class="px-1.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold uppercase leading-none">HOT</span>
     </a>
+    <?php } ?>
 
     <!-- Action Drawer Shortcuts -->
     <div class="pt-4 mt-3 border-t border-stone-200 dark:border-stone-800 space-y-2">

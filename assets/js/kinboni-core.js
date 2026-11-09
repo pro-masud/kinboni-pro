@@ -175,22 +175,26 @@
       const closeBtn = document.getElementById('close-cart-btn');
 
       this.openCart = () => {
-        if (!drawer) return;
-        drawer.classList.remove('translate-x-full');
-        if (backdrop) {
-          backdrop.classList.remove('hidden');
-          setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+        const d = drawer || document.getElementById('cart-drawer');
+        const b = backdrop || document.getElementById('cart-drawer-backdrop');
+        if (!d) return;
+        d.classList.remove('translate-x-full');
+        if (b) {
+          b.classList.remove('hidden');
+          setTimeout(() => b.classList.remove('opacity-0'), 10);
         }
         document.body.classList.add('overflow-hidden');
         Kinboni.refreshIcons();
       };
 
       this.closeCart = () => {
-        if (!drawer) return;
-        drawer.classList.add('translate-x-full');
-        if (backdrop) {
-          backdrop.classList.add('opacity-0');
-          setTimeout(() => backdrop.classList.add('hidden'), 300);
+        const d = drawer || document.getElementById('cart-drawer');
+        const b = backdrop || document.getElementById('cart-drawer-backdrop');
+        if (!d) return;
+        d.classList.add('translate-x-full');
+        if (b) {
+          b.classList.add('opacity-0');
+          setTimeout(() => b.classList.add('hidden'), 300);
         }
         document.body.classList.remove('overflow-hidden');
       };
@@ -198,6 +202,11 @@
       $(document).on('click', '.open-cart-btn', (e) => {
         e.preventDefault();
         this.openCart();
+      });
+
+      $(document).on('click', '#close-cart-btn, #cart-drawer-backdrop', (e) => {
+        e.preventDefault();
+        this.closeCart();
       });
 
       if (closeBtn) closeBtn.addEventListener('click', this.closeCart);
@@ -781,21 +790,31 @@
       const countEl = document.getElementById('search-count');
 
       this.openSearch = () => {
-        if (!modal) return;
-        modal.classList.remove('hidden');
+        const m = modal || document.getElementById('search-modal');
+        if (!m) return;
+        m.classList.remove('hidden');
+        m.style.display = 'flex';
         document.body.classList.add('overflow-hidden');
-        if (input) setTimeout(() => input.focus(), 50);
+        const inp = input || document.getElementById('search-input');
+        if (inp) setTimeout(() => inp.focus(), 50);
       };
 
       this.closeSearch = () => {
-        if (!modal) return;
-        modal.classList.add('hidden');
+        const m = modal || document.getElementById('search-modal');
+        if (!m) return;
+        m.classList.add('hidden');
+        m.style.display = 'none';
         document.body.classList.remove('overflow-hidden');
       };
 
       $(document).on('click', '.open-search-btn', (e) => {
         e.preventDefault();
         this.openSearch();
+      });
+
+      $(document).on('click', '#close-search-btn, #search-backdrop', (e) => {
+        e.preventDefault();
+        this.closeSearch();
       });
 
       if (closeBtn) closeBtn.addEventListener('click', this.closeSearch);
@@ -1012,11 +1031,13 @@
       const closeBtn = document.getElementById('close-wishlist-btn');
 
       this.openWishlist = () => {
-        if (!drawer) return;
-        drawer.classList.remove('translate-x-full');
-        if (backdrop) {
-          backdrop.classList.remove('hidden');
-          setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+        const d = drawer || document.getElementById('wishlist-drawer');
+        const b = backdrop || document.getElementById('wishlist-drawer-backdrop');
+        if (!d) return;
+        d.classList.remove('translate-x-full');
+        if (b) {
+          b.classList.remove('hidden');
+          setTimeout(() => b.classList.remove('opacity-0'), 10);
         }
         document.body.classList.add('overflow-hidden');
         this.renderWishlistItems();
@@ -1024,11 +1045,13 @@
       };
 
       this.closeWishlist = () => {
-        if (!drawer) return;
-        drawer.classList.add('translate-x-full');
-        if (backdrop) {
-          backdrop.classList.add('opacity-0');
-          setTimeout(() => backdrop.classList.add('hidden'), 300);
+        const d = drawer || document.getElementById('wishlist-drawer');
+        const b = backdrop || document.getElementById('wishlist-drawer-backdrop');
+        if (!d) return;
+        d.classList.add('translate-x-full');
+        if (b) {
+          b.classList.add('opacity-0');
+          setTimeout(() => b.classList.add('hidden'), 300);
         }
         document.body.classList.remove('overflow-hidden');
       };
@@ -1036,6 +1059,11 @@
       $(document).on('click', '.open-wishlist-btn', (e) => {
         e.preventDefault();
         this.openWishlist();
+      });
+
+      $(document).on('click', '#close-wishlist-btn, #wishlist-drawer-backdrop', (e) => {
+        e.preventDefault();
+        this.closeWishlist();
       });
 
       if (closeBtn) closeBtn.addEventListener('click', this.closeWishlist);

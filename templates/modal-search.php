@@ -4,25 +4,28 @@ if (!defined('ABSPATH')) {
 }
 ?>
 <!-- 4. SEARCH MODAL OVERLAY -->
-  <div id="search-modal" class="fixed inset-0 z-50 hidden flex flex-col justify-start p-4 sm:p-6 md:p-12">
-    <div id="search-backdrop" class="fixed inset-0 bg-stone-950/80 backdrop-blur-md"></div>
+  <div id="search-modal" class="fixed inset-0 z-50 hidden flex flex-col justify-start p-4 sm:p-6 md:p-12" style="display: none;">
+    <div id="search-backdrop" class="fixed inset-0 bg-stone-950/80 backdrop-blur-md cursor-pointer"></div>
     
     <div class="relative w-full max-w-3xl mx-auto bg-white dark:bg-stone-900 rounded-2xl shadow-2xl border border-stone-200 dark:border-stone-800 overflow-hidden z-10 animate-slide-down">
       
       <!-- Search Input Header -->
-      <div class="p-5 border-b border-stone-200 dark:border-stone-800 flex items-center gap-3">
-        <i data-lucide="search" class="w-5 h-5 text-gold-500 flex-shrink-0"></i>
+      <form action="<?php echo esc_url(home_url('/')); ?>" method="get" class="p-5 border-b border-stone-200 dark:border-stone-800 flex items-center gap-3 m-0">
+        <input type="hidden" name="post_type" value="product" />
+        <svg class="w-5 h-5 text-gold-500 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.3-4.3"></path></svg>
         <input 
           type="text" 
+          name="s"
           id="search-input" 
-          placeholder="Search by timepiece, leather, fragrance, gold, silk..." 
-          aria-label="Search Kinboni Atelier creations"
+          placeholder="<?php esc_attr_e('Search by timepiece, leather, fragrance, gold, silk...', 'kinboni-core'); ?>" 
+          aria-label="<?php esc_attr_e('Search Kinboni Atelier creations', 'kinboni-core'); ?>"
+          autocomplete="off"
           class="flex-grow bg-transparent text-stone-900 dark:text-stone-100 placeholder:text-stone-400 text-sm sm:text-base focus:outline-none"
         />
-        <button type="button" id="close-search-btn" class="w-8 h-8 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-900 dark:hover:text-white transition-colors" aria-label="Close search">
-          <i data-lucide="x" class="w-5 h-5"></i>
+        <button type="button" id="close-search-btn" class="w-8 h-8 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer" aria-label="<?php esc_attr_e('Close search', 'kinboni-core'); ?>">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
-      </div>
+      </form>
 
       <!-- Quick Search Recommendations -->
       <div class="px-5 py-3 bg-stone-50 dark:bg-stone-950 border-b border-stone-200 dark:border-stone-800 flex items-center gap-2 flex-wrap text-xs">

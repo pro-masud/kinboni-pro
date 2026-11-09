@@ -302,6 +302,10 @@ final class Kinboni_Core {
         }
 
         foreach ($templates as $template) {
+            // If drawers were already rendered dynamically by Kinboni Header Widget, skip duplicates
+            if (!empty($GLOBALS['kinboni_header_drawers_rendered']) && in_array($template, array('drawer-cart', 'modal-search', 'drawer-wishlist'), true)) {
+                continue;
+            }
             $template_file = KINBONI_CORE_PATH . 'templates/' . $template . '.php';
             if (file_exists($template_file)) {
                 include $template_file;
