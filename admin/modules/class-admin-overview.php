@@ -94,7 +94,7 @@ class Kinboni_Admin_Overview {
             }
         } else {
             foreach ($statuses as $st) {
-                $orders = wc_get_orders(array('status' => $st, 'return' => 'ids', 'limit' => -1));
+                $orders = wc_get_orders(array('type' => 'shop_order', 'status' => $st, 'return' => 'ids', 'limit' => -1));
                 $counts[$st] = count($orders);
             }
         }

@@ -1148,7 +1148,7 @@ final class Kinboni_Core {
         }
 
         $product_id = isset($_POST['product_id']) ? absint(wp_unslash($_POST['product_id'])) : 0;
-        $qty        = isset($_POST['quantity']) ? max(1, absint(wp_unslash($_POST['quantity']))) : 1;
+        $qty        = isset($_POST['quantity']) ? max(1, intval(wp_unslash($_POST['quantity']))) : 1;
         $price      = 0.0;
 
         if ($product_id > 0) {

@@ -184,7 +184,7 @@ class Kinboni_Ajax_Cart {
         }
 
         $key = isset($_POST['cart_item_key']) ? sanitize_text_field(wp_unslash($_POST['cart_item_key'])) : '';
-        $qty = isset($_POST['quantity']) ? max(0, absint(wp_unslash($_POST['quantity']))) : 1;
+        $qty = isset($_POST['quantity']) ? max(0, intval(wp_unslash($_POST['quantity']))) : 1;
 
         if ($key && WC()->cart) {
             $cart = WC()->cart->get_cart();
@@ -532,7 +532,7 @@ class Kinboni_Ajax_Cart {
 
         $product_id   = isset($_POST['product_id']) ? absint(wp_unslash($_POST['product_id'])) : 0;
         $variation_id = isset($_POST['variation_id']) ? absint(wp_unslash($_POST['variation_id'])) : 0;
-        $quantity     = isset($_POST['quantity']) ? max(1, absint(wp_unslash($_POST['quantity']))) : 1;
+        $quantity     = isset($_POST['quantity']) ? max(1, intval(wp_unslash($_POST['quantity']))) : 1;
         $variation    = isset($_POST['variation']) && is_array($_POST['variation']) ? array_map('sanitize_text_field', wp_unslash($_POST['variation'])) : array();
         $cart_item_data = array();
 

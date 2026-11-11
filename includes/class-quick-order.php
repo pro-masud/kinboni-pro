@@ -70,7 +70,7 @@ class Kinboni_Quick_Order {
         $customer_address = isset($_POST['address']) ? sanitize_textarea_field(wp_unslash($_POST['address'])) : '';
         $delivery_zone    = isset($_POST['zone']) ? sanitize_text_field(wp_unslash($_POST['zone'])) : 'inside';
         $product_id       = isset($_POST['product_id']) ? absint(wp_unslash($_POST['product_id'])) : 0;
-        $quantity         = isset($_POST['quantity']) ? min(max(1, absint(wp_unslash($_POST['quantity']))), 20) : 1;
+        $quantity         = isset($_POST['quantity']) ? min(max(1, intval(wp_unslash($_POST['quantity']))), 20) : 1;
         $promo_code       = isset($_POST['promo_code']) ? sanitize_text_field(wp_unslash($_POST['promo_code'])) : '';
 
         // 1. Validation

@@ -1,0 +1,231 @@
+Kinboni Core WordPress/WooCommerce plugin-এর complete production-readiness কাজ শেষ করো।
+
+গুরুত্বপূর্ণ:
+- Existing কোনো fix revert করবে না।
+- কোনো production data delete করবে না।
+- Test order #230 এবং #231 delete করবে না, যতক্ষণ না আমি আলাদা অনুমতি দিই।
+- Live email/SMS পাঠানোর ঠিক আগে আমার confirmation নেবে।
+- Unknown stock quantity বা production configuration নিজে অনুমান করে সেট করবে না।
+- প্রতিটি পরিবর্তনের পরে lint, syntax test এবং browser verification চালাবে।
+
+ইতোমধ্যে সম্পন্ন কাজ:
+
+- Checkout subtotal/total calculation bug fix করা হয়েছে।
+- Checkout total, shipping fee এবং outside-Dhaka fee test করা হয়েছে।
+- Order submission সফলভাবে test করা হয়েছে।
+- Order #230: Cap ×1, ৳86, COD, Processing।
+- Order #231: Cap ×2, ৳102, COD, Processing।
+- KINBONI HPOS/Admin Orders panel-এ line item, quantity, total এবং status দেখা গেছে।
+- welcome10 coupon apply সফল হয়েছে।
+- Coupon remove functionality-এর code fix করা হয়েছে।
+- LUXE20 coupon auto-create করার code fix করা হয়েছে।
+- PHP lint pass করেছে।
+- JavaScript syntax test pass করেছে।
+
+এখন নিচের ১০টি step সম্পূর্ণ করো:
+
+STEP 1 — Full codebase audit
+
+Plugin-এর প্রতিটি PHP, JavaScript, template, widget এবং admin module file পরীক্ষা করো।
+
+চেক করবে:
+
+- Undefined function/class
+- Broken hook বা AJAX action
+- Missing nonce validation
+- Missing capability check
+- PHP warning/fatal risk
+- JavaScript console error
+- Duplicate logic
+- Incorrect currency বা price conversion
+- Hardcoded production-sensitive value
+
+STEP 2 — Static validation এবং security check
+
+চালাও:
+
+- সব modified PHP file-এর `php -l`
+- JavaScript syntax test
+- `git diff --check`
+- Nonce validation check
+- AJAX permission check
+- Input sanitization এবং output escaping check
+- XSS, CSRF এবং unauthorized admin action risk check
+
+কোনো security issue পেলে fix করো এবং file path ও line number report করো।
+
+STEP 3 — Checkout/cart/order flow verification
+
+Browser দিয়ে যাচাই করো:
+
+- Product add to cart
+- Cart quantity increase/decrease
+- Cart item remove
+- Empty cart handling
+- Checkout subtotal
+- Inside-Dhaka shipping
+- Outside-Dhaka shipping
+- Discount calculation
+- Final payable total
+- Required field validation
+- Invalid phone validation
+- Duplicate submit protection
+- COD order submission
+- bKash/Nagad validation
+
+নতুন order তৈরি করলে test data ব্যবহার করবে এবং order ID report করবে।
+
+STEP 4 — WooCommerce Orders verification
+
+Native WooCommerce Orders panel এবং KINBONI HPOS/Admin Orders panel—দুই জায়গায় cross-check করো।
+
+প্রতিটি test order-এর জন্য যাচাই করো:
+
+- Correct product name
+- Correct quantity
+- Correct unit price
+- Correct line subtotal
+- Correct shipping line
+- Correct discount line
+- Correct final total
+- Correct customer details
+- Correct payment method
+- Correct order status
+
+STEP 5 — Stock management এবং reduction
+
+Cap product এবং প্রয়োজনীয় test product-এর inventory settings যাচাই করো।
+
+যদি stock management বন্ধ থাকে:
+
+- Production quantity অনুমান করে সেট করবে না।
+- আমাকে জানাবে এবং confirmation চাইবে।
+
+Stock management ও safe test quantity নিশ্চিত হওয়ার পরে:
+
+- New test order create করো।
+- Order processing হওয়ার পরে stock quantity কমেছে কিনা যাচাই করো।
+- Order cancellation/refund হলে stock restore হচ্ছে কিনা যাচাই করো।
+- Stock reduction না হলে root cause fix করো।
+
+STEP 6 — Email এবং SMS notification
+
+Notification configuration যাচাই করো:
+
+- Admin email enabled কিনা
+- Recipient email ঠিক কিনা
+- WooCommerce email configuration
+- SMTP/mail transport
+- SMS provider
+- API key/token
+- Sender ID
+- SMS template
+- Customer phone formatting
+
+Live test email বা SMS পাঠানোর আগে আমার confirmation নেবে।
+
+Confirmation পাওয়ার পরে:
+
+- Test email পাঠাও
+- Test SMS পাঠাও
+- Success/failure response capture করো
+- Delivery verification করো
+- Sensitive API key কখনো report-এ দেখাবে না
+
+STEP 7 — Coupon এবং promotion regression
+
+Browser দিয়ে নিচের সব test করো:
+
+- welcome10 apply
+- welcome10 remove
+- LUXE20 apply
+- LUXE20 remove
+- Invalid coupon
+- Expired coupon
+- Blank coupon
+- Duplicate coupon apply
+- Multiple coupon conflict
+- Coupon discount total
+- Coupon discount order details-এ আছে কিনা
+- Coupon remove করার পরে total restore হচ্ছে কিনা
+
+Coupon test-এর সময় কোনো real order submit করবে না।
+
+STEP 8 — Edge-case এবং reliability test
+
+চেক করবে:
+
+- Empty cart checkout
+- Zero বা negative quantity
+- Decimal quantity
+- Very large quantity
+- Invalid product ID
+- Missing product
+- Out-of-stock product
+- Duplicate order submit
+- Double-click submit
+- Refresh during submission
+- Expired nonce
+- AJAX timeout
+- Network failure
+- Malformed user input
+
+সব ক্ষেত্রে user-friendly error message নিশ্চিত করো।
+
+STEP 9 — Admin, performance এবং compatibility test
+
+চেক করবে:
+
+- Admin Orders page
+- Products page
+- Notifications page
+- Marketing/Coupons page
+- Reports/Analytics page
+- Mobile layout
+- Desktop layout
+- Browser console
+- Slow AJAX response
+- Cache বা stale total issue
+- Frontend JavaScript error
+- PHP warning বা database error
+
+সম্ভব হলে Chrome desktop এবং mobile-width viewport দুটোতেই test করো।
+
+STEP 10 — Final production-readiness review
+
+সবশেষে যাচাই করো:
+
+- No critical PHP error
+- No critical JavaScript error
+- No broken checkout flow
+- Correct order totals
+- Correct order status
+- Stock reduction verified
+- Email delivery verified
+- SMS delivery verified
+- Coupon apply/remove verified
+- Security checks passed
+- Backup recommendation তৈরি
+- Test order cleanup decision নেওয়া
+
+Test order delete করবে না যতক্ষণ না আমি confirmation দিই।
+
+শেষে একটি সুন্দর report দাও:
+
+1. Completed items
+2. Passed tests
+3. Failed tests
+4. Blocked items
+5. Changed files
+6. Remaining production blockers
+7. Test order status
+8. Production-ready verdict:
+   - READY
+   - READY WITH CONDITIONS
+   - NOT READY
+
+প্রতিটি issue-এর জন্য exact file path, root cause, fix এবং verification result লিখবে।
+
+ai gulo dakho akta akta list kore sundor kore then tumi fix koro
+
+age list korbe then amk a akta akta kore dakhabe then kaj suru korbe
