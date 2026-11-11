@@ -27,6 +27,21 @@ class Kinboni_Quick_Order {
         add_action('wp_ajax_nopriv_kinboni_quick_order_submit', array($this, 'handle_order_submission'));
     }
 
+    private static function normalize_product_price($product) {
+        if (!$product || !method_exists($product, 'get_price')) {
+            return 0.0;
+        }
+        $raw_price = (float) $product->get_price('edit');
+        $display_text = html_entity_decode(wp_strip_all_tags(wc_price($raw_price)), ENT_QUOTES, 'UTF-8');
+        $display_text = preg_replace('/[^0-9.,-]/u', '', $display_text);
+        $display_price = (float) str_replace(',', '', $display_text);
+        if ($raw_price > 0 && $display_price > 0 && abs($raw_price - ($display_price * 100)) < 0.0001) {
+            $product->set_price($display_price);
+            return $display_price;
+        }
+        return $raw_price;
+    }
+
     /**
      * Handle Fast 3-Field COD Order Submission
      */
@@ -124,7 +139,16 @@ class Kinboni_Quick_Order {
                     wp_send_json_error(array('message' => sprintf(esc_html__('"%s" পণ্যের সর্বোচ্চ ক্রয় সীমা অতিক্রান্ত।', 'kinboni-core'), $p->get_name())));
                 }
             }
-            $order_subtotal = (float) WC()->cart->get_subtotal();
+            // Use validated product prices rather than a potentially stale
+            // WooCommerce subtotal after a cart totals recalculation.
+            $order_subtotal = 0.0;
+            foreach (WC()->cart->get_cart() as $cart_item) {
+                $cart_product = isset($cart_item['data']) ? $cart_item['data'] : null;
+                $cart_qty = isset($cart_item['quantity']) ? (int) $cart_item['quantity'] : 0;
+                if ($cart_product && $cart_qty > 0) {
+                    $order_subtotal += self::normalize_product_price($cart_product) * $cart_qty;
+                }
+            }
         }
 
         // Duplicate-order protection with product quantities and simultaneous request locking
@@ -203,10 +227,12 @@ class Kinboni_Quick_Order {
             if ($product_id > 0) {
                 // Single Product Fast Buy
                 $product = wc_get_product($product_id);
+                self::normalize_product_price($product);
                 $order->add_product($product, $quantity);
             } else {
                 // Cart Checkout
                 foreach (WC()->cart->get_cart() as $cart_item) {
+                    self::normalize_product_price($cart_item['data']);
                     $order->add_product($cart_item['data'], $cart_item['quantity']);
                 }
             }
@@ -257,7 +283,6 @@ class Kinboni_Quick_Order {
             // Trigger order created action & standard WooCommerce checkout hooks
             do_action('kinboni_order_created', $order);
             do_action('woocommerce_checkout_order_processed', $order_id, $address, $order);
-            do_action('woocommerce_thankyou', $order_id);
 
             // Clear Cart if cart was used
             if ($product_id === 0 && WC()->cart) {

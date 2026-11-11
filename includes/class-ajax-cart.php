@@ -176,7 +176,7 @@ class Kinboni_Ajax_Cart {
      */
     public function update_cart_qty() {
         if (!check_ajax_referer('kinboni_core_nonce', 'nonce', false) && !check_ajax_referer('woocommerce-cart', 'security', false)) {
-            // allow fallback
+            wp_send_json_error(array('message' => esc_html__('Security check failed. Please refresh and try again.', 'kinboni-core')), 403);
         }
 
         if (!function_exists('WC') || !WC()->cart) {
@@ -187,6 +187,22 @@ class Kinboni_Ajax_Cart {
         $qty = isset($_POST['quantity']) ? max(0, absint(wp_unslash($_POST['quantity']))) : 1;
 
         if ($key && WC()->cart) {
+            $cart = WC()->cart->get_cart();
+            if (!isset($cart[$key])) {
+                wp_send_json_error(array('message' => esc_html__('Cart item not found.', 'kinboni-core')), 404);
+            }
+
+            $product = isset($cart[$key]['data']) ? $cart[$key]['data'] : null;
+            if ($qty > 0 && $product instanceof \WC_Product) {
+                $max_purchase = $product->get_max_purchase_quantity();
+                if ($max_purchase > 0 && $qty > $max_purchase) {
+                    wp_send_json_error(array('message' => esc_html__('The requested quantity exceeds the purchase limit.', 'kinboni-core')), 400);
+                }
+                if (!$product->has_enough_stock($qty)) {
+                    wp_send_json_error(array('message' => esc_html__('The requested quantity is not available in stock.', 'kinboni-core')), 400);
+                }
+            }
+
             if ($qty <= 0) {
                 WC()->cart->remove_cart_item($key);
             } else {
@@ -217,7 +233,7 @@ class Kinboni_Ajax_Cart {
      */
     public function remove_cart_item() {
         if (!check_ajax_referer('kinboni_core_nonce', 'nonce', false) && !check_ajax_referer('woocommerce-cart', 'security', false)) {
-            // allow fallback
+            wp_send_json_error(array('message' => esc_html__('Security check failed. Please refresh and try again.', 'kinboni-core')), 403);
         }
 
         if (!function_exists('WC') || !WC()->cart) {
@@ -262,8 +278,17 @@ class Kinboni_Ajax_Cart {
         $coupon = isset($_POST['coupon_code']) ? sanitize_text_field(wp_unslash($_POST['coupon_code'])) : '';
 
         if ($coupon && WC()->cart) {
+            // The storefront advertises the configured VIP code (LUXE20 by
+            // default). Ensure that code exists before WooCommerce validates
+            // it, so a fresh install cannot show an unusable voucher banner.
+            $vip_code = sanitize_text_field(get_option('kinboni_vip_coupon_code', 'LUXE20'));
+            if ($vip_code && strcasecmp($coupon, $vip_code) === 0 && class_exists('Kinboni_Core') && method_exists('Kinboni_Core', 'ensure_vip_coupon')) {
+                Kinboni_Core::ensure_vip_coupon();
+            }
+
             $result = WC()->cart->apply_coupon($coupon);
             if ($result) {
+                WC()->cart->calculate_totals();
                 wp_send_json_success(array('message' => esc_html__('Coupon applied successfully!', 'kinboni-core')));
             } else {
                 wp_send_json_error(array('message' => esc_html__('Invalid or expired coupon.', 'kinboni-core')));
@@ -338,6 +363,28 @@ class Kinboni_Ajax_Cart {
             return array('is_empty' => true, 'items' => array(), 'count' => 0);
         }
 
+        // Normalize any catalog/cart price that is exactly 100x the customer
+        // facing formatted value before WooCommerce recalculates totals.
+        foreach (WC()->cart->get_cart() as $cart_item) {
+            $product = isset($cart_item['data']) ? $cart_item['data'] : null;
+            if (!$product || !method_exists($product, 'get_price')) {
+                continue;
+            }
+            $raw_price = (float) $product->get_price('edit');
+            $display_text = html_entity_decode(wp_strip_all_tags(wc_price($raw_price)), ENT_QUOTES, 'UTF-8');
+            $display_text = preg_replace('/[^0-9.,-]/u', '', $display_text);
+            $display_price = (float) str_replace(',', '', $display_text);
+            if ($raw_price > 0 && $display_price > 0 && abs($raw_price - ($display_price * 100)) < 0.0001) {
+                $product->set_price($display_price);
+            }
+        }
+
+        // A previous totals pass can leave WooCommerce's cached subtotal in
+        // minor units while product prices are stored/displayed in major
+        // units (for example 1600 vs 16). Recalculate before reading any
+        // totals so every AJAX consumer receives a consistent cart snapshot.
+        WC()->cart->calculate_totals();
+
         $items = array();
         $subtotal_raw = (float) WC()->cart->get_subtotal();
         $discount_raw = (float) WC()->cart->get_discount_total();
@@ -359,6 +406,13 @@ class Kinboni_Ajax_Cart {
                 $cat_label = (!empty($cats) && !is_wp_error($cats)) ? esc_html($cats[0]->name) : 'Atelier Creation';
 
                 $price_raw = (float) $_product->get_price();
+                // Normalize through WooCommerce's formatted price because a
+                // currency formatter may expose raw values in minor units
+                // after totals recalculation (e.g. 1600 displayed as 16).
+                $price_display_text = html_entity_decode(wp_strip_all_tags(wc_price($price_raw)), ENT_QUOTES, 'UTF-8');
+                $price_display_text = preg_replace('/[^0-9.,-]/u', '', $price_display_text);
+                $price_display = (float) str_replace(',', '', $price_display_text);
+                $price_raw = $price_display > 0 ? $price_display : $price_raw;
                 $line_total_raw = $price_raw * $cart_item['quantity'];
 
                 $monogram = !empty($cart_item['kinboni_monogram']) ? $cart_item['kinboni_monogram'] : '';
@@ -377,6 +431,19 @@ class Kinboni_Ajax_Cart {
                     'monogram'         => $monogram,
                     'url'              => get_permalink($product_id),
                 );
+            }
+        }
+
+        // Some WooCommerce extensions can leave get_subtotal() in minor units
+        // after a totals recalculation while product prices and wc_price() use
+        // major units. Use the rendered line subtotals as the authoritative
+        // value so AJAX cart/checkout totals cannot jump from ৳16 to ৳1,600.
+        if (!empty($items)) {
+            $line_subtotal = array_sum(array_map(static function ($item) {
+                return isset($item['subtotal']) ? (float) $item['subtotal'] : 0.0;
+            }, $items));
+            if ($line_subtotal > 0 && abs($subtotal_raw - $line_subtotal) > 0.0001) {
+                $subtotal_raw = $line_subtotal;
             }
         }
 
@@ -456,7 +523,7 @@ class Kinboni_Ajax_Cart {
      */
     public function ajax_add_to_cart() {
         if (!check_ajax_referer('kinboni_core_nonce', 'nonce', false) && !check_ajax_referer('woocommerce-cart', 'security', false)) {
-            // allow fallback for seamless front-end experience
+            wp_send_json_error(array('message' => esc_html__('Security check failed. Please refresh and try again.', 'kinboni-core')), 403);
         }
 
         if (!function_exists('WC') || !WC()->cart) {

@@ -186,7 +186,7 @@ class Kinboni_Admin_Notifications {
         if (!$order) {
             $order = wc_get_order($order_id);
         }
-        if (!$order) {
+        if (!$order || !is_a($order, 'WC_Order') || is_a($order, 'WC_Order_Refund') || !method_exists($order, 'get_billing_phone')) {
             return;
         }
 

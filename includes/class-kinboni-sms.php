@@ -96,8 +96,8 @@ class Kinboni_SMS {
             }
 
         } elseif ($provider === 'bulksmsbd') {
-            // BulkSMSBD API (http://bulksmsbd.net/api/smsapi)
-            $url = 'http://bulksmsbd.net/api/smsapi';
+            // BulkSMSBD API (https://bulksmsbd.net/api/smsapi)
+            $url = 'https://bulksmsbd.net/api/smsapi';
             $params = array(
                 'api_key'  => $api_key,
                 'type'     => 'text',
@@ -192,7 +192,7 @@ class Kinboni_SMS {
     }
 
     private function process_order_sms($order) {
-        if (!self::is_enabled()) {
+        if (!self::is_enabled() || !$order || !is_a($order, 'WC_Order') || is_a($order, 'WC_Order_Refund') || !method_exists($order, 'get_billing_phone')) {
             return;
         }
 

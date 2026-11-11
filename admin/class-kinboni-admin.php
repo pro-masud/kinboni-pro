@@ -406,6 +406,7 @@ class Kinboni_Admin {
         $user_id = get_current_user_id();
 
         $latest_order = wc_get_orders(array(
+            'type'    => 'shop_order',
             'limit'   => 1,
             'orderby' => 'date',
             'order'   => 'DESC',

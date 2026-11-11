@@ -63,35 +63,35 @@ class Kinboni_Admin_Analytics {
         $now = current_time('timestamp');
 
         if (!empty($custom_start) && !empty($custom_end)) {
-            $start_dt = date('Y-m-d 00:00:00', strtotime($custom_start));
-            $end_dt   = date('Y-m-d 23:59:59', strtotime($custom_end));
-            $range_label = date('M j, Y', strtotime($custom_start)) . ' – ' . date('M j, Y', strtotime($custom_end));
+            $start_dt = wp_date('Y-m-d 00:00:00', strtotime($custom_start));
+            $end_dt   = wp_date('Y-m-d 23:59:59', strtotime($custom_end));
+            $range_label = wp_date('M j, Y', strtotime($custom_start)) . ' – ' . wp_date('M j, Y', strtotime($custom_end));
             return array('start' => $start_dt, 'end' => $end_dt, 'label' => $range_label, 'type' => 'custom');
         }
 
         switch ($range) {
             case 'today':
-                $start_dt = date('Y-m-d 00:00:00', $now);
-                $end_dt   = date('Y-m-d 23:59:59', $now);
-                $label    = 'Today (' . date('M j, Y', $now) . ')';
+                $start_dt = wp_date('Y-m-d 00:00:00', $now);
+                $end_dt   = wp_date('Y-m-d 23:59:59', $now);
+                $label    = 'Today (' . wp_date('M j, Y', $now) . ')';
                 break;
 
             case '7d':
-                $start_dt = date('Y-m-d 00:00:00', strtotime('-7 days', $now));
-                $end_dt   = date('Y-m-d 23:59:59', $now);
+                $start_dt = wp_date('Y-m-d 00:00:00', strtotime('-7 days', $now));
+                $end_dt   = wp_date('Y-m-d 23:59:59', $now);
                 $label    = 'Last 7 Days';
                 break;
 
             case '12m':
-                $start_dt = date('Y-m-01 00:00:00', strtotime('-11 months', $now));
-                $end_dt   = date('Y-m-d 23:59:59', $now);
+                $start_dt = wp_date('Y-m-01 00:00:00', strtotime('-11 months', $now));
+                $end_dt   = wp_date('Y-m-d 23:59:59', $now);
                 $label    = 'Last 12 Months';
                 break;
 
             case '30d':
             default:
-                $start_dt = date('Y-m-d 00:00:00', strtotime('-30 days', $now));
-                $end_dt   = date('Y-m-d 23:59:59', $now);
+                $start_dt = wp_date('Y-m-d 00:00:00', strtotime('-30 days', $now));
+                $end_dt   = wp_date('Y-m-d 23:59:59', $now);
                 $label    = 'Last 30 Days';
                 break;
         }
@@ -124,6 +124,7 @@ class Kinboni_Admin_Analytics {
 
         // HPOS Compatible Orders in this period
         $orders = wc_get_orders(array(
+            'type'         => 'shop_order',
             'limit'        => -1,
             'date_created' => $start . '...' . $end,
             'return'       => 'ids',
@@ -338,6 +339,7 @@ class Kinboni_Admin_Analytics {
 
         // Pre-aggregate HPOS WooCommerce orders in date range
         $orders_in_range = wc_get_orders(array(
+            'type'         => 'shop_order',
             'limit'        => -1,
             'date_created' => $start . '...' . $end,
             'status'       => array('wc-completed', 'wc-processing', 'wc-on-hold', 'wc-pending'),
@@ -367,8 +369,8 @@ class Kinboni_Admin_Analytics {
             for ($h = 0; $h < 24; $h++) {
                 $hour_str = sprintf('%02d:00', $h);
                 $labels[] = $hour_str;
-                $h_start = date('Y-m-d H:00:00', strtotime($start . " +{$h} hours"));
-                $h_end   = date('Y-m-d H:59:59', strtotime($start . " +{$h} hours"));
+                $h_start = wp_date('Y-m-d H:00:00', strtotime($start . " +{$h} hours"));
+                $h_end   = wp_date('Y-m-d H:59:59', strtotime($start . " +{$h} hours"));
 
                 $vis = (int) $wpdb->get_var($wpdb->prepare(
                     "SELECT COUNT(DISTINCT visitor_id) FROM {$table} WHERE created_at BETWEEN %s AND %s",
@@ -392,11 +394,11 @@ class Kinboni_Admin_Analytics {
             $start_time = strtotime($start);
             for ($i = 0; $i < 12; $i++) {
                 $m_time = strtotime("+{$i} months", $start_time);
-                $m_label = date('M Y', $m_time);
+                $m_label = wp_date('M Y', $m_time);
                 $labels[] = $m_label;
 
-                $m_start = date('Y-m-01 00:00:00', $m_time);
-                $m_end   = date('Y-m-t 23:59:59', $m_time);
+                $m_start = wp_date('Y-m-01 00:00:00', $m_time);
+                $m_end   = wp_date('Y-m-t 23:59:59', $m_time);
 
                 $vis = (int) $wpdb->get_var($wpdb->prepare(
                     "SELECT COUNT(DISTINCT visitor_id) FROM {$table} WHERE created_at BETWEEN %s AND %s",
@@ -407,7 +409,7 @@ class Kinboni_Admin_Analytics {
                     $m_start, $m_end
                 ));
 
-                $m_key   = date('Y-m', $m_time);
+                $m_key   = wp_date('Y-m', $m_time);
                 $ord_cnt = $order_buckets[$m_key] ?? 0;
                 $conv    = ($vis > 0) ? round(($ord_cnt / $vis) * 100, 1) : 0;
 
@@ -426,9 +428,9 @@ class Kinboni_Admin_Analytics {
                 $day_time = strtotime("+{$d} days", $start_ts);
                 if ($day_time > $end_ts) break;
 
-                $labels[] = date('M j', $day_time);
-                $day_start = date('Y-m-d 00:00:00', $day_time);
-                $day_end   = date('Y-m-d 23:59:59', $day_time);
+                $labels[] = wp_date('M j', $day_time);
+                $day_start = wp_date('Y-m-d 00:00:00', $day_time);
+                $day_end   = wp_date('Y-m-d 23:59:59', $day_time);
 
                 $vis = (int) $wpdb->get_var($wpdb->prepare(
                     "SELECT COUNT(DISTINCT visitor_id) FROM {$table} WHERE created_at BETWEEN %s AND %s",
@@ -439,7 +441,7 @@ class Kinboni_Admin_Analytics {
                     $day_start, $day_end
                 ));
 
-                $d_key   = date('Y-m-d', $day_time);
+                $d_key   = wp_date('Y-m-d', $day_time);
                 $ord_cnt = $order_buckets[$d_key] ?? 0;
                 $conv    = ($vis > 0) ? round(($ord_cnt / $vis) * 100, 1) : 0;
 
@@ -493,7 +495,7 @@ class Kinboni_Admin_Analytics {
 
             $report = $this->query_analytics_report($range, $start_date, $end_date);
 
-            $filename = 'kinboni-analytics-' . date('Y-m-d') . '.csv';
+            $filename = 'kinboni-analytics-' . wp_date('Y-m-d') . '.csv';
             header('Content-Type: text/csv; charset=UTF-8');
             header('Content-Disposition: attachment; filename="' . $filename . '"');
             header('Pragma: no-cache');

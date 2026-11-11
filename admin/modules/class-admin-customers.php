@@ -181,14 +181,19 @@ class Kinboni_Admin_Customers {
 
         // 1. Gather recent WooCommerce orders (HPOS compatible, bounded for memory safety)
         $orders = wc_get_orders(array(
+            'type'    => 'shop_order',
             'limit'   => 1000,
             'orderby' => 'date',
             'order'   => 'DESC',
         ));
 
         foreach ($orders as $order) {
-            $phone = $order->get_billing_phone();
-            $email = strtolower(trim($order->get_billing_email()));
+            if (!$order || !is_a($order, 'WC_Order') || is_a($order, 'WC_Order_Refund') || !method_exists($order, 'get_billing_phone')) {
+                continue;
+            }
+
+            $phone = (string) $order->get_billing_phone();
+            $email = strtolower(trim((string) $order->get_billing_email()));
             $name  = trim($order->get_billing_first_name() . ' ' . $order->get_billing_last_name()) ?: 'Connoisseur';
             $city  = $order->get_billing_city() ?: 'Dhaka';
             $user_id = $order->get_user_id();

@@ -928,9 +928,9 @@ class Kinboni_Widget_Header extends Widget_Base {
         $show_mobile_btn = !isset($settings['show_mobile_menu']) || ('yes' === $settings['show_mobile_menu']);
 
         // Dynamic WooCommerce page links
-        $shop_url     = function_exists('wc_get_page_permalink') ? wc_get_page_permalink('shop') : home_url('/shop');
-        $cart_url     = function_exists('wc_get_cart_url') ? wc_get_cart_url() : home_url('/cart');
-        $checkout_url = function_exists('wc_get_checkout_url') ? wc_get_checkout_url() : home_url('/checkout');
+        $shop_url     = (function_exists('wc_get_page_permalink') && wc_get_page_permalink('shop')) ? wc_get_page_permalink('shop') : home_url('/shop/');
+        $cart_url     = (function_exists('wc_get_cart_url') && wc_get_cart_url() && wc_get_cart_url() !== home_url('/')) ? wc_get_cart_url() : home_url('/cart/');
+        $checkout_url = (function_exists('wc_get_checkout_url') && wc_get_checkout_url() && wc_get_checkout_url() !== home_url('/')) ? wc_get_checkout_url() : home_url('/checkout/');
         $account_url  = !empty($settings['account_url']['url']) 
             ? $settings['account_url']['url'] 
             : (function_exists('wc_get_page_permalink') ? wc_get_page_permalink('myaccount') : home_url('/my-account'));

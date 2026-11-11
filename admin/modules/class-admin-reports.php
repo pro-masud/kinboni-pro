@@ -159,6 +159,7 @@ class Kinboni_Admin_Reports {
 
         // Fetch HPOS orders within window (only paid/confirmed orders: completed & processing)
         $orders = wc_get_orders(array(
+            'type'         => 'shop_order',
             'limit'        => -1,
             'date_created' => $bounds['start'] . '...' . $bounds['end'],
             'status'       => array('wc-completed', 'wc-processing'),

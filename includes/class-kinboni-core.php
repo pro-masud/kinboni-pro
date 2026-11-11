@@ -62,6 +62,11 @@ final class Kinboni_Core {
         // Load Textdomain
         load_plugin_textdomain('kinboni-core', false, dirname(plugin_basename(KINBONI_CORE_FILE)) . '/languages');
 
+        // This plugin renders its own checkout form and submit flow. Woo's
+        // native checkout updater watches the body class globally and can
+        // overwrite the custom summary with stale minor-unit totals.
+        add_action('wp_enqueue_scripts', array($this, 'dequeue_native_checkout_scripts'), 100);
+
         // Register Custom Product Gallery Image Size
         if (function_exists('add_image_size')) {
             add_image_size('kinboni-product-gallery', 800, 1000, true);
@@ -70,6 +75,10 @@ final class Kinboni_Core {
         // Check if WooCommerce is installed and activated
         if (!class_exists('WooCommerce')) {
             add_action('admin_notices', array($this, 'admin_notice_missing_woocommerce'));
+        } else {
+            // Repair stale cart line totals that are exactly 100x the current
+            // product price after a currency/totals recalculation.
+            add_action('woocommerce_before_calculate_totals', array($this, 'normalize_cart_prices'), 5);
         }
 
         // Check if Elementor is installed and activated
@@ -128,6 +137,53 @@ final class Kinboni_Core {
         add_action('wp_ajax_nopriv_kinboni_register', array($this, 'ajax_register'));
         add_action('wp_ajax_kinboni_update_profile', array($this, 'ajax_update_profile'));
         add_action('wp_ajax_nopriv_kinboni_update_profile', array($this, 'ajax_update_profile'));
+    }
+
+    /** Remove Woo's native checkout updater from the custom checkout page. */
+    public function dequeue_native_checkout_scripts() {
+        if (function_exists('is_checkout') && is_checkout()) {
+            foreach (array('wc-checkout', 'wc-country-select', 'wc-address-i18n') as $handle) {
+                wp_dequeue_script($handle);
+                wp_deregister_script($handle);
+            }
+        }
+    }
+
+    /**
+     * Normalize cart line prices when a stale session has stored minor units.
+     *
+     * @param WC_Cart $cart WooCommerce cart instance.
+     */
+    public function normalize_cart_prices($cart) {
+        if (!$cart || !is_object($cart) || !method_exists($cart, 'get_cart')) {
+            return;
+        }
+
+        foreach ($cart->get_cart() as $cart_item) {
+            $product = isset($cart_item['data']) ? $cart_item['data'] : null;
+            $qty = isset($cart_item['quantity']) ? (int) $cart_item['quantity'] : 0;
+            $line_subtotal = isset($cart_item['line_subtotal']) ? (float) $cart_item['line_subtotal'] : 0.0;
+            if (!$product || $qty < 1) {
+                continue;
+            }
+
+            $unit_price = (float) $product->get_price('edit');
+            // The site's BDT formatter historically divided values by 100
+            // when rendering prices. If the stored cart price is exactly 100x
+            // the value customers see, normalize it before Woo totals run.
+            $display_text = html_entity_decode(wp_strip_all_tags(wc_price($unit_price)), ENT_QUOTES, 'UTF-8');
+            $display_text = preg_replace('/[^0-9.,-]/u', '', $display_text);
+            $display_price = (float) str_replace(',', '', $display_text);
+            if ($unit_price > 0 && $display_price > 0 && abs($unit_price - ($display_price * 100)) < 0.0001) {
+                $unit_price = $display_price;
+                $product->set_price($unit_price);
+            }
+
+            $expected = $unit_price * $qty;
+            if ($line_subtotal > 0 && $unit_price > 0 && abs($line_subtotal - ($expected * 100)) < 0.0001) {
+                $product->set_price($unit_price);
+            }
+        }
     }
 
     /**
@@ -263,8 +319,8 @@ final class Kinboni_Core {
             'whatsapp_phone'          => sanitize_text_field(get_option('kinboni_whatsapp_phone', '8801700000000')),
             'is_user_logged_in'       => is_user_logged_in(),
             'shop_url'                => function_exists('wc_get_page_permalink') ? wc_get_page_permalink('shop') : home_url('/shop/'),
-            'checkout_url'            => function_exists('wc_get_checkout_url') ? wc_get_checkout_url() : home_url('/checkout/'),
-            'cart_url'                => function_exists('wc_get_cart_url') ? wc_get_cart_url() : home_url('/cart/'),
+            'checkout_url'            => (function_exists('wc_get_checkout_url') && wc_get_checkout_url() && wc_get_checkout_url() !== home_url('/')) ? wc_get_checkout_url() : home_url('/checkout/'),
+            'cart_url'                => (function_exists('wc_get_cart_url') && wc_get_cart_url() && wc_get_cart_url() !== home_url('/')) ? wc_get_cart_url() : home_url('/cart/'),
             'myaccount_url'           => function_exists('wc_get_page_permalink') ? wc_get_page_permalink('myaccount') : home_url('/my-account/'),
             'home_url'                => home_url('/'),
         ));
@@ -587,7 +643,18 @@ final class Kinboni_Core {
         $client_ip = self::get_client_ip();
         $cart_sig  = md5(wp_json_encode(array_keys($cart->get_cart())) . '_' . $cart->get_cart_contents_count());
         $lock_key  = 'kb_order_lock_' . md5($client_ip . '_' . $clean_phone . '_' . $cart_sig);
-        $locked_id = (int) get_transient($lock_key);
+        $lock_state = get_transient($lock_key);
+        if ($lock_state === 'processing') {
+            // Give a concurrent request a short window to receive the order ID.
+            for ($i = 0; $i < 4; $i++) {
+                usleep(500000);
+                $lock_state = get_transient($lock_key);
+                if ($lock_state !== 'processing') {
+                    break;
+                }
+            }
+        }
+        $locked_id = is_numeric($lock_state) ? (int) $lock_state : 0;
 
         if ($locked_id > 0) {
             $existing_order = wc_get_order($locked_id);
@@ -604,6 +671,14 @@ final class Kinboni_Core {
             }
         }
 
+        if ($lock_state === 'processing') {
+            wp_send_json_error(array('message' => esc_html__('This order is already being processed. Please wait a moment.', 'kinboni-core')));
+        }
+
+        // Set the short-lived processing state before order creation to close
+        // the double-click race window. It is replaced by the final order ID.
+        set_transient($lock_key, 'processing', 15);
+
         try {
             $order = wc_create_order();
 
@@ -611,7 +686,15 @@ final class Kinboni_Core {
             foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
                 $pid = $cart_item['product_id'];
                 $qty = $cart_item['quantity'];
-                $item_id = $order->add_product($cart_item['data'], $qty);
+                $cart_product = $cart_item['data'];
+                $unit_price = (float) $cart_product->get_price('edit');
+                $display_text = html_entity_decode(wp_strip_all_tags(wc_price($unit_price)), ENT_QUOTES, 'UTF-8');
+                $display_text = preg_replace('/[^0-9.,-]/u', '', $display_text);
+                $display_price = (float) str_replace(',', '', $display_text);
+                if ($unit_price > 0 && $display_price > 0 && abs($unit_price - ($display_price * 100)) < 0.0001) {
+                    $cart_product->set_price($display_price);
+                }
+                $item_id = $order->add_product($cart_product, $qty);
                 if (!empty($cart_item['kinboni_monogram'])) {
                     wc_add_order_item_meta($item_id, esc_html__('Bespoke Foil Monogram', 'kinboni-core'), sanitize_text_field($cart_item['kinboni_monogram']));
                 }
@@ -638,7 +721,24 @@ final class Kinboni_Core {
             $order->set_address($address_data, 'shipping');
 
             // Dynamic Unified Shipping Line
-            $subtotal_raw  = (float) $cart->get_subtotal();
+            // Derive the checkout subtotal from the validated cart products.
+            // WooCommerce extensions can leave get_subtotal() in minor units
+            // after a recalculation; product prices remain the source of truth.
+            $subtotal_raw = 0.0;
+            foreach ($cart->get_cart() as $cart_item) {
+                $cart_product = isset($cart_item['data']) ? $cart_item['data'] : null;
+                $cart_qty = isset($cart_item['quantity']) ? (int) $cart_item['quantity'] : 0;
+                if ($cart_product && $cart_qty > 0) {
+                    $unit_price = (float) $cart_product->get_price('edit');
+                    $display_text = html_entity_decode(wp_strip_all_tags(wc_price($unit_price)), ENT_QUOTES, 'UTF-8');
+                    $display_text = preg_replace('/[^0-9.,-]/u', '', $display_text);
+                    $display_price = (float) str_replace(',', '', $display_text);
+                    if ($unit_price > 0 && $display_price > 0 && abs($unit_price - ($display_price * 100)) < 0.0001) {
+                        $unit_price = $display_price;
+                    }
+                    $subtotal_raw += $unit_price * $cart_qty;
+                }
+            }
             $shipping_info = self::calculate_shipping($subtotal_raw, $city_val);
 
             $shipping_item = new \WC_Order_Item_Shipping();
@@ -694,7 +794,6 @@ final class Kinboni_Core {
             // Trigger order created action & standard WooCommerce checkout hooks
             do_action('kinboni_order_created', $order);
             do_action('woocommerce_checkout_order_processed', $order_id, $address_data, $order);
-            do_action('woocommerce_thankyou', $order_id);
 
             // Empty cart
             $cart->empty_cart();
@@ -704,16 +803,37 @@ final class Kinboni_Core {
             $ord_dt = $order->get_date_created();
             $date_str = $ord_dt ? wp_date('M d, Y', $ord_dt->getTimestamp()) : wp_date('M d, Y');
 
+            $full_name = trim($first_name . ' ' . $last_name);
+            $wa_phone_raw = get_option('kinboni_whatsapp_phone', '8801700000000');
+            $wa_phone     = preg_replace('/\D/', '', (string) $wa_phone_raw);
+            $whatsapp_url = '';
+            if (!empty($wa_phone) && $wa_phone !== '8801700000000') {
+                $whatsapp_msg = rawurlencode(sprintf(
+                    "Hello Kinboni Atelier! I have placed an order.\nOrder ID: %s\nName: %s\nPhone: %s\nTotal: ৳%s\nAddress: %s",
+                    $formatted_order_number,
+                    $full_name,
+                    $clean_phone,
+                    $order_total,
+                    $address_1
+                ));
+                $whatsapp_url = "https://wa.me/{$wa_phone}?text={$whatsapp_msg}";
+            }
+
             wp_send_json_success(array(
                 'order_id'        => $order_id,
                 'order_number'    => $formatted_order_number,
                 'date'            => $date_str,
                 'total'           => (float)$order_total,
                 'total_formatted' => wc_price($order_total),
+                'name'            => $full_name,
+                'phone'           => $clean_phone,
+                'address'         => $address_1,
+                'whatsapp_url'    => $whatsapp_url,
                 'payment_method'  => $order->get_payment_method_title(),
                 'message'         => sprintf(esc_html__('Order %s confirmed successfully!', 'kinboni-core'), $formatted_order_number),
             ));
         } catch (\Exception $e) {
+            delete_transient($lock_key);
             Kinboni_Activity_Logger::error('checkout', $e->getMessage(), array('trace' => $e->getTraceAsString()));
             wp_send_json_error(array('message' => esc_html__('An error occurred while creating your order. Please try again.', 'kinboni-core')));
         }

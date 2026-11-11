@@ -552,11 +552,15 @@ class Kinboni_Admin_System {
         // Check file extension (.json)
         $filename  = sanitize_file_name($_FILES['backup_file']['name']);
         $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-        if ($extension !== 'json') {
+        $tmp_name  = isset($_FILES['backup_file']['tmp_name']) ? $_FILES['backup_file']['tmp_name'] : '';
+        $file_type = $tmp_name && function_exists('wp_check_filetype_and_ext')
+            ? wp_check_filetype_and_ext($tmp_name, $filename, array('json' => 'application/json'))
+            : array();
+        if ($extension !== 'json' || !is_uploaded_file($tmp_name) || empty($file_type['ext']) || $file_type['ext'] !== 'json') {
             wp_send_json_error(array('message' => esc_html__('Invalid file extension. Please upload a .json file.', 'kinboni-core')));
         }
 
-        $json_content = file_get_contents($_FILES['backup_file']['tmp_name']);
+        $json_content = file_get_contents($tmp_name);
         $payload = json_decode($json_content, true);
 
         if (!$payload || !isset($payload['schema']) || $payload['schema'] !== 'kinboni-pro-settings') {

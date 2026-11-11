@@ -117,6 +117,7 @@ class Kinboni_Admin_Orders {
         $per_page = $args['per_page'] ?? 20;
 
         $query_args = array(
+            'type'     => 'shop_order',
             'limit'    => $per_page,
             'page'     => $paged,
             'paginate' => true,
@@ -175,8 +176,12 @@ class Kinboni_Admin_Orders {
         $formatted_orders   = array();
 
         foreach ($wc_orders as $order) {
+            if (!$order || !is_a($order, 'WC_Order') || is_a($order, 'WC_Order_Refund') || !method_exists($order, 'get_billing_phone')) {
+                continue;
+            }
+
             $order_id = $order->get_id();
-            $phone = $order->get_billing_phone();
+            $phone = (string) $order->get_billing_phone();
             $clean_phone = preg_replace('/[^0-9]/', '', $phone);
             if (strlen($clean_phone) === 13 && substr($clean_phone, 0, 2) === '88') {
                 $clean_phone = substr($clean_phone, 2);
@@ -187,6 +192,7 @@ class Kinboni_Admin_Orders {
             if (!empty($clean_phone)) {
                 if (!isset($phone_counts_cache[$clean_phone])) {
                     $matching_res = wc_get_orders(array(
+                        'type'          => 'shop_order',
                         'billing_phone' => $clean_phone,
                         'return'        => 'ids',
                         'limit'         => 10,
@@ -360,7 +366,7 @@ class Kinboni_Admin_Orders {
 
         $order_id = isset($_POST['order_id']) ? absint(wp_unslash($_POST['order_id'])) : 0;
         $order = wc_get_order($order_id);
-        if (!$order) {
+        if (!$order || !is_a($order, 'WC_Order') || is_a($order, 'WC_Order_Refund')) {
             wp_send_json_error(array('message' => esc_html__('Order not found.', 'kinboni-core')));
         }
 
@@ -450,7 +456,7 @@ class Kinboni_Admin_Orders {
 
         $order_id = isset($_POST['order_id']) ? absint(wp_unslash($_POST['order_id'])) : 0;
         $order = wc_get_order($order_id);
-        if (!$order) {
+        if (!$order || !is_a($order, 'WC_Order') || is_a($order, 'WC_Order_Refund')) {
             wp_send_json_error(array('message' => esc_html__('Order not found.', 'kinboni-core')));
         }
 
@@ -485,7 +491,7 @@ class Kinboni_Admin_Orders {
             );
         }
 
-        $phone = $order->get_billing_phone();
+        $phone = method_exists($order, 'get_billing_phone') ? (string) $order->get_billing_phone() : '';
         $clean_phone = preg_replace('/[^0-9]/', '', $phone);
         if (strlen($clean_phone) === 13 && substr($clean_phone, 0, 2) === '88') {
             $clean_phone = substr($clean_phone, 2);
@@ -495,6 +501,7 @@ class Kinboni_Admin_Orders {
         $repeat_orders = array();
         if (!empty($clean_phone)) {
             $matching_ids = wc_get_orders(array(
+                'type'          => 'shop_order',
                 'billing_phone' => $clean_phone,
                 'return'        => 'ids',
                 'limit'         => -1,
@@ -502,7 +509,7 @@ class Kinboni_Admin_Orders {
             foreach ($matching_ids as $mid) {
                 if ($mid !== $order_id) {
                     $m_order = wc_get_order($mid);
-                    if ($m_order) {
+                    if ($m_order && is_a($m_order, 'WC_Order') && !is_a($m_order, 'WC_Order_Refund')) {
                         $m_dt = $m_order->get_date_created();
                         $repeat_orders[] = array(
                             'id'     => $mid,
@@ -560,7 +567,7 @@ class Kinboni_Admin_Orders {
 
         $order_id = isset($_POST['order_id']) ? absint(wp_unslash($_POST['order_id'])) : 0;
         $order = wc_get_order($order_id);
-        if (!$order) {
+        if (!$order || !is_a($order, 'WC_Order') || is_a($order, 'WC_Order_Refund')) {
             wp_send_json_error(array('message' => esc_html__('Order not found.', 'kinboni-core')));
         }
 
@@ -644,6 +651,7 @@ class Kinboni_Admin_Orders {
         $filter_end    = isset($_GET['end_date']) ? sanitize_text_field(wp_unslash($_GET['end_date'])) : '';
 
         $query_args = array(
+            'type'    => 'shop_order',
             'limit'   => -1,
             'orderby' => 'date',
             'order'   => 'DESC',
@@ -693,6 +701,10 @@ class Kinboni_Admin_Orders {
         ));
 
         foreach ($orders as $o) {
+            if (!$o || !is_a($o, 'WC_Order') || is_a($o, 'WC_Order_Refund') || !method_exists($o, 'get_billing_phone')) {
+                continue;
+            }
+
             $items_str = array();
             foreach ($o->get_items() as $item) {
                 $items_str[] = $item->get_name() . ' (qty: ' . $item->get_quantity() . ')';

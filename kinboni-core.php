@@ -3,7 +3,7 @@
  * Plugin Name: Kinboni Core & Elementor Addons
  * Plugin URI: https://kinboni.com
  * Description: Core functionality and Elementor widgets suite for KINBONI Atelier luxury storefront. Includes 3-Field Fast Cash on Delivery checkout, Slide-over Mini-cart, 15s Live Sales Social Proof, Quick View, and Wishlist.
- * Version: 1.0.3
+ * Version: 1.0.30
  * Author: Kinboni Dev Team
  * Author URI: https://kinboni.com
  * Text Domain: kinboni-core
@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define Plugin Constants
-define('KINBONI_CORE_VERSION', '1.0.3');
+define('KINBONI_CORE_VERSION', '1.0.30');
 define('KINBONI_CORE_FILE', __FILE__);
 define('KINBONI_CORE_PATH', plugin_dir_path(__FILE__));
 define('KINBONI_CORE_URL', plugin_dir_url(__FILE__));

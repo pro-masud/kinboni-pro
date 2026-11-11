@@ -122,7 +122,7 @@ class Kinboni_Admin_Marketing {
         // Overall Metrics
         $total_active = $wpdb->get_var("SELECT COUNT(id) FROM {$table} WHERE status = 'subscribed'");
         $total_unsub  = $wpdb->get_var("SELECT COUNT(id) FROM {$table} WHERE status = 'unsubscribed'");
-        $this_month   = $wpdb->get_var($wpdb->prepare("SELECT COUNT(id) FROM {$table} WHERE subscribed_at >= %s", date('Y-m-01 00:00:00', current_time('timestamp'))));
+        $this_month   = $wpdb->get_var($wpdb->prepare("SELECT COUNT(id) FROM {$table} WHERE subscribed_at >= %s", wp_date('Y-m-01 00:00:00', current_time('timestamp'))));
 
         return array(
             'subscribers'   => $subscribers,
@@ -175,13 +175,13 @@ class Kinboni_Admin_Marketing {
             $date_map = array();
             for ($d = $days; $d >= 0; $d--) {
                 $ts = strtotime("-{$d} days");
-                $d_str = date('Y-m-d', $ts);
-                $labels[] = date('M j', $ts);
+                $d_str = wp_date('Y-m-d', $ts);
+                $labels[] = wp_date('M j', $ts);
                 $date_map[$d_str] = count($labels) - 1;
                 $counts[] = 0;
             }
 
-            $start_sql = date('Y-m-d 00:00:00', strtotime("-{$days} days"));
+            $start_sql = wp_date('Y-m-d 00:00:00', strtotime("-{$days} days"));
             $end_sql   = current_time('mysql');
             $rows = $wpdb->get_results($wpdb->prepare(
                 "SELECT DATE(subscribed_at) as dt, COUNT(id) as cnt FROM {$table}
@@ -200,12 +200,12 @@ class Kinboni_Admin_Marketing {
             $date_map = array();
             for ($m = 11; $m >= 0; $m--) {
                 $month_ts = strtotime("-{$m} months");
-                $m_key = date('Y-m', $month_ts);
-                $labels[] = date('M Y', $month_ts);
+                $m_key = wp_date('Y-m', $month_ts);
+                $labels[] = wp_date('M Y', $month_ts);
                 $date_map[$m_key] = count($labels) - 1;
                 $counts[] = 0;
             }
-            $start_sql = date('Y-m-01 00:00:00', strtotime('-11 months'));
+            $start_sql = wp_date('Y-m-01 00:00:00', strtotime('-11 months'));
             $end_sql   = current_time('mysql');
             $rows = $wpdb->get_results($wpdb->prepare(
                 "SELECT DATE_FORMAT(subscribed_at, '%%Y-%%m') as ym, COUNT(id) as cnt FROM {$table}
@@ -272,7 +272,7 @@ class Kinboni_Admin_Marketing {
             // Last 30 days new subscribers
             $recipients = $wpdb->get_results($wpdb->prepare(
                 "SELECT email, name FROM {$table} WHERE status = 'subscribed' AND subscribed_at >= %s",
-                date('Y-m-d H:i:s', strtotime('-30 days'))
+                wp_date('Y-m-d H:i:s', strtotime('-30 days'))
             ), ARRAY_A);
         }
 
@@ -702,7 +702,7 @@ class Kinboni_Admin_Marketing {
         $table = $wpdb->prefix . 'kinboni_abandoned_carts';
 
         $threshold_mins = (int) get_option('kinboni_abandoned_threshold_min', 30);
-        $threshold_time = date('Y-m-d H:i:s', current_time('timestamp') - ($threshold_mins * 60));
+        $threshold_time = wp_date('Y-m-d H:i:s', current_time('timestamp') - ($threshold_mins * 60));
 
         $paged    = isset($_GET['paged']) ? max(1, absint(wp_unslash($_GET['paged']))) : 1;
         $per_page = 20;
@@ -770,7 +770,7 @@ class Kinboni_Admin_Marketing {
     /**
      * Capture Active Cart on Front-end
      */
-    public function capture_active_cart() {
+    public function capture_active_cart($contact = array()) {
         if (!function_exists('WC') || !WC()->cart) {
             return;
         }
@@ -805,15 +805,14 @@ class Kinboni_Admin_Marketing {
             return;
         }
 
-        $session_id = WC()->session ? WC()->session->get_customer_id() : session_id();
-        if (empty($session_id)) {
-            $session_id = md5($_SERVER['REMOTE_ADDR'] . $_SERVER['HTTP_USER_AGENT']);
-        }
+        // Only use WooCommerce's opaque customer/session identifier. Do not
+        // fingerprint visitors from IP address and user-agent values.
+        $session_id = (WC()->session) ? WC()->session->get_customer_id() : '';
 
         $user_id = get_current_user_id();
-        $email = '';
-        $phone = '';
-        $name  = '';
+        $email = !empty($contact['email']) ? sanitize_email($contact['email']) : '';
+        $phone = !empty($contact['phone']) ? sanitize_text_field($contact['phone']) : '';
+        $name  = !empty($contact['name']) ? sanitize_text_field($contact['name']) : '';
 
         if ($user_id) {
             $user  = get_userdata($user_id);
@@ -878,19 +877,13 @@ class Kinboni_Admin_Marketing {
             wp_send_json_success();
         }
 
-        if (WC()->customer) {
-            if (!empty($email) && is_email($email)) {
-                WC()->customer->set_billing_email($email);
-            }
-            if (!empty($phone)) {
-                WC()->customer->set_billing_phone($phone);
-            }
-            if (!empty($name)) {
-                WC()->customer->set_billing_first_name($name);
-            }
-        }
-
-        $this->capture_active_cart();
+        // Do not mutate WC_Customer here: setters can trigger a WooCommerce
+        // totals recalculation while the shopper is still filling the form.
+        $this->capture_active_cart(array(
+            'email' => $email,
+            'phone' => $phone,
+            'name'  => $name,
+        ));
         wp_send_json_success();
     }
 
@@ -912,7 +905,7 @@ class Kinboni_Admin_Marketing {
      * @param WC_Order $order
      */
     public function on_kinboni_order_created($order) {
-        if (!$order || !is_a($order, 'WC_Order')) {
+        if (!$order || !is_a($order, 'WC_Order') || is_a($order, 'WC_Order_Refund') || !method_exists($order, 'get_billing_phone')) {
             return;
         }
 
@@ -1146,8 +1139,8 @@ class Kinboni_Admin_Marketing {
         $table = $wpdb->prefix . 'kinboni_abandoned_carts';
 
         $threshold_min = (int) get_option('kinboni_abandoned_threshold_min', 30);
-        $time_min_ago  = date('Y-m-d H:i:s', current_time('timestamp') - ($threshold_min * 60));
-        $time_24h_ago  = date('Y-m-d H:i:s', current_time('timestamp') - 86400);
+        $time_min_ago  = wp_date('Y-m-d H:i:s', current_time('timestamp') - ($threshold_min * 60));
+        $time_24h_ago  = wp_date('Y-m-d H:i:s', current_time('timestamp') - 86400);
 
         // Find eligible abandoned carts (up to 20 per run):
         // 1. reminder_count = 0 and last activity older than threshold
@@ -1376,7 +1369,7 @@ class Kinboni_Admin_Marketing {
             $table = $wpdb->prefix . 'kinboni_subscribers';
             $subscribers = $wpdb->get_results("SELECT email, name, status, subscribed_at, unsubscribed_at FROM {$table} ORDER BY subscribed_at DESC", ARRAY_A);
 
-            $filename = 'kinboni-subscribers-' . date('Y-m-d') . '.csv';
+            $filename = 'kinboni-subscribers-' . wp_date('Y-m-d') . '.csv';
             header('Content-Type: text/csv; charset=UTF-8');
             header('Content-Disposition: attachment; filename="' . $filename . '"');
             header('Pragma: no-cache');

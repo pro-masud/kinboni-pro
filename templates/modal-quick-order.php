@@ -240,17 +240,23 @@ if (!defined('ABSPATH')) {
           <i data-lucide="check-circle-2" class="w-9 h-9"></i>
         </div>
 
-        <span class="inline-block px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider mb-2">
-          Order Successfully Placed!
+        <span class="inline-block px-3.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider mb-2">
+          অর্ডার সফলভাবে সম্পন্ন হয়েছে!
         </span>
 
-        <h3 class="font-serif text-2xl sm:text-3xl font-medium text-stone-900 dark:text-white mb-1">
-          Thank You, <span id="confirmed-customer-name" class="text-gold-700 dark:text-gold-400"></span>!
+        <h3 class="font-serif text-2xl sm:text-3xl font-medium text-stone-900 dark:text-white mb-2">
+          ধন্যবাদ, <span id="confirmed-customer-name" class="text-gold-700 dark:text-gold-400"></span>!
         </h3>
 
-        <p class="text-sm text-stone-600 dark:text-stone-300 max-w-sm mx-auto mb-6 font-normal">
-          Your bespoke order has been accepted. Our concierge team will reach out shortly for dispatch.
-        </p>
+        <div class="max-w-md mx-auto mb-6 p-4 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-500/25 text-xs sm:text-sm text-center space-y-1">
+          <p class="font-bold text-emerald-800 dark:text-emerald-300 flex items-center justify-center gap-1.5">
+            <i data-lucide="phone-call" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+            <span>আমাদের Kinboni-এর টিম খুব শীঘ্রই আপনার সাথে যোগাযোগ করবে</span>
+          </p>
+          <p class="text-xs text-stone-600 dark:text-stone-300 font-normal">
+            অর্ডারটি নিশ্চিত করতে এবং দ্রুত ডেলিভারির ব্যবস্থা নিতে আমাদের প্রতিনিধি আপনার ফোনে যোগাযোগ করবেন।
+          </p>
+        </div>
 
         <!-- Invoice Receipt Box -->
         <div class="p-4 sm:p-5 rounded-2xl bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 text-xs text-left mb-6 space-y-2.5">

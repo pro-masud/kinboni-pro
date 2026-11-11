@@ -602,7 +602,7 @@ class Kinboni_Widget_Cart extends Widget_Base {
         $show_arches           = !empty($settings['show_arch_shapes']) && $settings['show_arch_shapes'] === 'yes';
 
         $home_url              = home_url('/');
-        $checkout_url          = function_exists('wc_get_checkout_url') ? wc_get_checkout_url() : home_url('/checkout/');
+        $checkout_url          = (function_exists('wc_get_checkout_url') && wc_get_checkout_url() && wc_get_checkout_url() !== home_url('/')) ? wc_get_checkout_url() : home_url('/checkout/');
         $currency_symbol       = function_exists('get_woocommerce_currency_symbol') ? get_woocommerce_currency_symbol() : '৳';
 
         // Retrieve Live WooCommerce Cart
@@ -954,7 +954,6 @@ class Kinboni_Widget_Cart extends Widget_Base {
                     <div class="space-y-2.5 pt-2">
                       <a 
                         href="<?php echo esc_url($checkout_url); ?>"
-                        onclick="if(window.RouterController){RouterController.navigate('checkout'); return false;}"
                         class="wc-proceed-to-checkout w-full py-4 bg-gold-400 hover:bg-gold-500 text-stone-950 text-xs font-bold uppercase tracking-widest rounded-xl shadow-lg hover:shadow-gold-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <i data-lucide="credit-card" class="w-4 h-4"></i>

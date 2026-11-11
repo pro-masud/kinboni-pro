@@ -124,7 +124,7 @@ class Kinboni_Admin_Overview {
                 $end_prev   = strtotime('yesterday 23:59:59', $now);
 
                 // Hourly buckets (00:00 to 23:00)
-                for ($h = 0; $h <= (int)date('H', $now); $h++) {
+                for ($h = 0; $h <= (int)wp_date('H', $now); $h++) {
                     $labels[] = sprintf('%02d:00', $h);
                     $revenue_points[$h] = 0;
                     $orders_points[$h] = 0;
@@ -139,8 +139,8 @@ class Kinboni_Admin_Overview {
 
                 for ($d = 6; $d >= 0; $d--) {
                     $day_ts = strtotime("-{$d} days", $now);
-                    $key = date('Y-m-d', $day_ts);
-                    $labels[] = date('D (M j)', $day_ts);
+                    $key = wp_date('Y-m-d', $day_ts);
+                    $labels[] = wp_date('D (M j)', $day_ts);
                     $revenue_points[$key] = 0;
                     $orders_points[$key] = 0;
                 }
@@ -154,8 +154,8 @@ class Kinboni_Admin_Overview {
 
                 for ($m = 11; $m >= 0; $m--) {
                     $month_ts = strtotime("-{$m} months", $now);
-                    $key = date('Y-m', $month_ts);
-                    $labels[] = date('M Y', $month_ts);
+                    $key = wp_date('Y-m', $month_ts);
+                    $labels[] = wp_date('M Y', $month_ts);
                     $revenue_points[$key] = 0;
                     $orders_points[$key] = 0;
                 }
@@ -170,8 +170,8 @@ class Kinboni_Admin_Overview {
 
                 for ($d = 29; $d >= 0; $d--) {
                     $day_ts = strtotime("-{$d} days", $now);
-                    $key = date('Y-m-d', $day_ts);
-                    $labels[] = date('M j', $day_ts);
+                    $key = wp_date('Y-m-d', $day_ts);
+                    $labels[] = wp_date('M j', $day_ts);
                     $revenue_points[$key] = 0;
                     $orders_points[$key] = 0;
                 }
@@ -180,7 +180,8 @@ class Kinboni_Admin_Overview {
 
         // Fetch Current Period Orders
         $orders_curr = wc_get_orders(array(
-            'date_created' => date('Y-m-d H:i:s', $start_curr) . '...' . date('Y-m-d H:i:s', $end_curr),
+            'type'         => 'shop_order',
+            'date_created' => wp_date('Y-m-d H:i:s', $start_curr) . '...' . wp_date('Y-m-d H:i:s', $end_curr),
             'status'       => array('completed', 'processing'),
             'limit'        => -1,
         ));
@@ -195,19 +196,19 @@ class Kinboni_Admin_Overview {
             $order_ts = $ord_dt ? ($ord_dt->getTimestamp() + (int) (get_option('gmt_offset') * HOUR_IN_SECONDS)) : current_time('timestamp');
 
             if ($range === 'today') {
-                $bucket = (int) date('H', $order_ts);
+                $bucket = (int) wp_date('H', $order_ts);
                 if (isset($revenue_points[$bucket])) {
                     $revenue_points[$bucket] += $total;
                     $orders_points[$bucket] += 1;
                 }
             } elseif ($range === '12m') {
-                $bucket = date('Y-m', $order_ts);
+                $bucket = wp_date('Y-m', $order_ts);
                 if (isset($revenue_points[$bucket])) {
                     $revenue_points[$bucket] += $total;
                     $orders_points[$bucket] += 1;
                 }
             } else {
-                $bucket = date('Y-m-d', $order_ts);
+                $bucket = wp_date('Y-m-d', $order_ts);
                 if (isset($revenue_points[$bucket])) {
                     $revenue_points[$bucket] += $total;
                     $orders_points[$bucket] += 1;
@@ -217,7 +218,8 @@ class Kinboni_Admin_Overview {
 
         // Fetch Previous Equivalent Period Orders
         $orders_prev = wc_get_orders(array(
-            'date_created' => date('Y-m-d H:i:s', $start_prev) . '...' . date('Y-m-d H:i:s', $end_prev),
+            'type'         => 'shop_order',
+            'date_created' => wp_date('Y-m-d H:i:s', $start_prev) . '...' . wp_date('Y-m-d H:i:s', $end_prev),
             'status'       => array('completed', 'processing'),
             'limit'        => -1,
         ));
@@ -309,7 +311,7 @@ class Kinboni_Admin_Overview {
 
         // New subscribers today
         $table_subscribers = $wpdb->prefix . 'kinboni_subscribers';
-        $today_start = date('Y-m-d 00:00:00', current_time('timestamp'));
+        $today_start = wp_date('Y-m-d 00:00:00', current_time('timestamp'));
         $subscribers_count = (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(id) FROM {$table_subscribers} WHERE subscribed_at >= %s",
             $today_start
@@ -327,6 +329,7 @@ class Kinboni_Admin_Overview {
      */
     public function get_recent_orders($limit = 10) {
         $orders = wc_get_orders(array(
+            'type'    => 'shop_order',
             'limit'   => $limit,
             'orderby' => 'date',
             'order'   => 'DESC',
@@ -334,13 +337,20 @@ class Kinboni_Admin_Overview {
 
         $list = array();
         foreach ($orders as $order) {
+            if (!$order || !is_a($order, 'WC_Order') || is_a($order, 'WC_Order_Refund')) {
+                continue;
+            }
             $o_dt = $order->get_date_created();
+            $phone = method_exists($order, 'get_billing_phone') ? $order->get_billing_phone() : '—';
+            $first_name = method_exists($order, 'get_billing_first_name') ? $order->get_billing_first_name() : '';
+            $last_name = method_exists($order, 'get_billing_last_name') ? $order->get_billing_last_name() : '';
+            $city = method_exists($order, 'get_billing_city') ? $order->get_billing_city() : 'Dhaka';
             $list[] = array(
                 'id'           => $order->get_id(),
                 'order_number' => $order->get_order_number(),
-                'customer'     => trim($order->get_billing_first_name() . ' ' . $order->get_billing_last_name()) ?: 'Guest Connoisseur',
-                'phone'        => $order->get_billing_phone() ?: '—',
-                'city'         => $order->get_billing_city() ?: 'Dhaka',
+                'customer'     => trim($first_name . ' ' . $last_name) ?: 'Guest Connoisseur',
+                'phone'        => $phone ?: '—',
+                'city'         => $city ?: 'Dhaka',
                 'status'       => $order->get_status(),
                 'status_name'  => wc_get_order_status_name($order->get_status()),
                 'items_count'  => $order->get_item_count(),
@@ -422,17 +432,17 @@ class Kinboni_Admin_Overview {
         $now = current_time('timestamp');
         switch ($range) {
             case 'today':
-                $start = date('Y-m-d 00:00:00', $now);
+                $start = wp_date('Y-m-d 00:00:00', $now);
                 break;
             case '7d':
-                $start = date('Y-m-d 00:00:00', strtotime('-6 days', $now));
+                $start = wp_date('Y-m-d 00:00:00', strtotime('-6 days', $now));
                 break;
             case '12m':
-                $start = date('Y-m-01 00:00:00', strtotime('-11 months', $now));
+                $start = wp_date('Y-m-01 00:00:00', strtotime('-11 months', $now));
                 break;
             case '30d':
             default:
-                $start = date('Y-m-d 00:00:00', strtotime('-29 days', $now));
+                $start = wp_date('Y-m-d 00:00:00', strtotime('-29 days', $now));
                 break;
         }
 
@@ -459,7 +469,7 @@ class Kinboni_Admin_Overview {
         $chart_labels = array();
         $chart_views  = array();
         foreach ($rows as $row) {
-            $chart_labels[] = date('M j', strtotime($row->visit_date));
+            $chart_labels[] = wp_date('M j', strtotime($row->visit_date));
             $chart_views[]  = (int) $row->view_count;
         }
 

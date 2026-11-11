@@ -97,6 +97,28 @@
         .replace(/'/g, '&#039;');
     },
 
+    // WooCommerce may return currency symbols as HTML entities (for example
+    // "&#2547;&nbsp;"). Decode them before assigning to textContent so AJAX
+    // cart/checkout updates never expose raw markup to customers.
+    currencySymbol(value) {
+      const fallback = '৳';
+      if (value === null || value === undefined || value === '') return fallback;
+      const decoder = document.createElement('textarea');
+      decoder.innerHTML = String(value);
+      return (decoder.value || fallback).replace(/\u00a0/g, ' ').trim() || fallback;
+    },
+
+    amountFromFormatted(value) {
+      if (value === null || value === undefined) return 0;
+      const holder = document.createElement('span');
+      holder.innerHTML = String(value);
+      const text = (holder.textContent || '').replace(/\u00a0/g, ' ');
+      const match = text.match(/-?[\d,]+(?:\.\d+)?/);
+      if (!match) return 0;
+      const amount = parseFloat(match[0].replace(/,/g, ''));
+      return Number.isFinite(amount) ? amount : 0;
+    },
+
     state: {
       currentOrderProduct: null,
       deliveryZone: 'inside', // 'inside' = 70, 'outside' = 130
@@ -556,19 +578,74 @@
 
       const p = this.state.currentOrderProduct;
       if (p) {
-        this.state.subtotal = p.price;
+        this.state.subtotal = parseFloat(p.price) || 0;
+        this.state.cartItems = [p];
         container.innerHTML = `
           <div class="flex items-center gap-3 p-3 rounded-2xl bg-stone-50 dark:bg-stone-800 border border-stone-200/70 dark:border-stone-700">
             <img src="${p.image}" alt="${Kinboni.esc(p.name)}" class="w-14 h-16 rounded-xl object-cover bg-stone-100 flex-shrink-0" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2256%22 height=%2264%22 viewBox=%220 0 56 64%22%3E%3Crect width=%2256%22 height=%2264%22 fill=%22%23e7e5e4%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23a8a29e%22 font-size=%2210%22%3ENo Image%3C/text%3E%3C/svg%3E';this.onerror=null;" />
             <div class="flex-grow min-w-0">
               <h4 class="font-serif text-sm font-semibold text-stone-900 dark:text-white truncate">${Kinboni.esc(p.name)}</h4>
               <p class="text-xs text-stone-500">Qty: 1</p>
-              <p class="font-serif text-xs font-bold text-gold-700 dark:text-gold-400">৳${p.price.toLocaleString()}</p>
+              <p class="font-serif text-xs font-bold text-gold-700 dark:text-gold-400">৳${this.state.subtotal.toLocaleString()}</p>
             </div>
           </div>
         `;
+        this.updateQuickOrderTotals();
+        this.refreshIcons();
       } else {
-        container.innerHTML = `<p class="text-xs text-stone-500 py-2">Ordering items from current shopping bag.</p>`;
+        container.innerHTML = `
+          <div class="flex items-center justify-center py-6 text-stone-400 text-xs">
+            <i data-lucide="loader-2" class="w-4 h-4 animate-spin mr-2"></i> কার্ট প্রোডাক্ট লোড হচ্ছে...
+          </div>
+        `;
+        this.refreshIcons();
+
+        $.ajax({
+          url: (window.kinboniCoreData && kinboniCoreData.ajax_url) || '/wp-admin/admin-ajax.php',
+          type: 'POST',
+          data: {
+            action: 'kinboni_get_cart_data',
+            nonce: (window.kinboniCoreData && kinboniCoreData.nonce) || ''
+          },
+          success: (res) => {
+            if (res && res.success && res.data && res.data.items && res.data.items.length > 0) {
+              const items = res.data.items;
+              this.state.subtotal = parseFloat(res.data.subtotal) || 0;
+              this.state.cartItems = items;
+
+              let html = '';
+              items.forEach((item) => {
+                const itemImg = item.image || '';
+                const itemPrice = parseFloat(item.subtotal) || (parseFloat(item.price) * (item.quantity || 1)) || 0;
+                html += `
+                  <div class="flex items-center gap-3 p-2.5 sm:p-3 rounded-2xl bg-stone-50 dark:bg-stone-800 border border-stone-200/70 dark:border-stone-700">
+                    <img src="${itemImg}" alt="${Kinboni.esc(item.name)}" class="w-12 h-14 sm:w-14 sm:h-16 rounded-xl object-cover bg-stone-100 dark:bg-stone-900 flex-shrink-0" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2256%22 height=%2264%22 viewBox=%220 0 56 64%22%3E%3Crect width=%2256%22 height=%2264%22 fill=%22%23e7e5e4%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23a8a29e%22 font-size=%2210%22%3ENo Image%3C/text%3E%3C/svg%3E';this.onerror=null;" />
+                    <div class="flex-grow min-w-0">
+                      <h4 class="font-serif text-xs sm:text-sm font-semibold text-stone-900 dark:text-white truncate">${Kinboni.esc(item.name)}</h4>
+                      <p class="text-[11px] text-stone-500">Qty: ${item.quantity}</p>
+                      <p class="font-serif text-xs font-bold text-gold-700 dark:text-gold-400">৳${itemPrice.toLocaleString()}</p>
+                    </div>
+                  </div>
+                `;
+              });
+              container.innerHTML = html;
+              this.updateQuickOrderTotals();
+              this.refreshIcons();
+            } else {
+              this.state.subtotal = 0;
+              this.state.cartItems = [];
+              container.innerHTML = `
+                <div class="p-4 text-center text-xs text-stone-500">
+                  আপনার ব্যাগ বর্তমানে খালি! কার্টে কোনো প্রোডাক্ট নেই।
+                </div>
+              `;
+              this.updateQuickOrderTotals();
+            }
+          },
+          error: () => {
+            container.innerHTML = `<p class="text-xs text-rose-500 py-2">কার্ট ডেটা লোড করতে সমস্যা হয়েছে।</p>`;
+          }
+        });
       }
 
       this.updateQuickOrderTotals();
@@ -600,6 +677,14 @@
       const phone = phoneInput ? phoneInput.value.trim() : '';
       const address = addressInput ? addressInput.value.trim() : '';
 
+      // Check empty bag when ordering from cart
+      if (!this.state.currentOrderProduct) {
+        if (this.state.subtotal <= 0) {
+          this.showToast('আপনার শপিং ব্যাগ খালি! অনুগ্রহ করে আগে পণ্য যোগ করুন।', 'error');
+          return;
+        }
+      }
+
       // Validate
       if (!name) {
         this.showToast('অনুগ্রহ করে আপনার নাম দিন।', 'error');
@@ -619,11 +704,12 @@
 
       // Submit
       if (submitBtn) submitBtn.disabled = true;
-      if (btnText) btnText.textContent = 'অর্ডার প্রক্রিয়া করা হচ্ছে...';
+      if (btnText) btnText.innerHTML = '<span class="flex items-center justify-center gap-2"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>অর্ডার প্রক্রিয়া করা হচ্ছে...</span>';
+      this.refreshIcons();
 
       const data = {
         action: 'kinboni_quick_order_submit',
-        nonce: kinboniCoreData.nonce,
+        nonce: (window.kinboniCoreData && kinboniCoreData.nonce) || '',
         name: name,
         phone: phone,
         address: address,
@@ -635,55 +721,26 @@
       };
 
       $.ajax({
-        url: kinboniCoreData.ajax_url,
+        url: (window.kinboniCoreData && kinboniCoreData.ajax_url) || '/wp-admin/admin-ajax.php',
         type: 'POST',
         data: data,
         success: (res) => {
           if (submitBtn) submitBtn.disabled = false;
           if (btnText) btnText.textContent = 'Confirm Order (Cash on Delivery)';
 
-          if (res.success) {
-            // Show Success View
-            const formView = document.getElementById('checkout-form-view');
-            const successView = document.getElementById('checkout-success-view');
-
-            if (formView) formView.classList.add('hidden');
-            if (successView) successView.classList.remove('hidden');
-
-            // Populate Success Details
-            const nameEl = document.getElementById('confirmed-customer-name');
-            const orderIdEl = document.getElementById('confirmed-order-id');
-            const phoneEl = document.getElementById('confirmed-customer-phone');
-            const addressEl = document.getElementById('confirmed-customer-address');
-            const totalEl = document.getElementById('confirmed-order-total');
-            const whatsappLink = document.getElementById('confirmed-whatsapp-link');
-
-            if (nameEl) nameEl.textContent = res.data.name;
-            if (orderIdEl) orderIdEl.textContent = res.data.order_number;
-            if (phoneEl) phoneEl.textContent = res.data.phone;
-            if (addressEl) addressEl.textContent = res.data.address;
-            if (totalEl) totalEl.innerHTML = res.data.order_total;
-            if (whatsappLink) {
-              if (res.data.whatsapp_url) {
-                whatsappLink.href = res.data.whatsapp_url;
-                whatsappLink.classList.remove('hidden');
-                whatsappLink.style.display = '';
-              } else {
-                whatsappLink.href = '#';
-                whatsappLink.classList.add('hidden');
-                whatsappLink.style.display = 'none';
-              }
-            }
+          if (res.success && res.data) {
+            // Show Success View popup
+            this.showOrderSuccessModal(res.data);
 
             this.trackAnalyticsEvent('Purchase', {
               transaction_id: res.data.order_id,
               value: parseFloat(res.data.order_total_raw || res.data.total || 0),
               currency: (window.kinboniCoreData && kinboniCoreData.currency_code) || 'BDT'
             });
-            this.showToast(res.data.message, 'success');
+            this.showToast(res.data.message || 'অর্ডারটি সফলভাবে সম্পন্ন হয়েছে!', 'success');
             $(document.body).trigger('wc_fragment_refresh');
           } else {
-            this.showToast(res.data.message || 'Error creating order.', 'error');
+            this.showToast((res.data && res.data.message) || res.message || 'Error creating order.', 'error');
           }
         },
         error: () => {
@@ -692,6 +749,47 @@
           this.showToast('সার্ভারে সমস্যা হয়েছে। পুনরায় চেষ্টা করুন।', 'error');
         }
       });
+    },
+
+    showOrderSuccessModal(data) {
+      if (!data) return;
+      const modal = document.getElementById('checkout-modal');
+      const formView = document.getElementById('checkout-form-view');
+      const successView = document.getElementById('checkout-success-view');
+
+      if (!modal || !successView) return;
+
+      if (formView) formView.classList.add('hidden');
+      successView.classList.remove('hidden');
+
+      const nameEl = document.getElementById('confirmed-customer-name');
+      const orderIdEl = document.getElementById('confirmed-order-id');
+      const phoneEl = document.getElementById('confirmed-customer-phone');
+      const addressEl = document.getElementById('confirmed-customer-address');
+      const totalEl = document.getElementById('confirmed-order-total');
+      const whatsappLink = document.getElementById('confirmed-whatsapp-link');
+
+      if (nameEl) nameEl.textContent = data.name || '';
+      if (orderIdEl) orderIdEl.textContent = data.order_number || data.order_id || '';
+      if (phoneEl) phoneEl.textContent = data.phone || '';
+      if (addressEl) addressEl.textContent = data.address || '';
+      if (totalEl) totalEl.innerHTML = data.order_total || data.total_formatted || ('৳' + (data.total || 0));
+
+      if (whatsappLink) {
+        if (data.whatsapp_url) {
+          whatsappLink.href = data.whatsapp_url;
+          whatsappLink.classList.remove('hidden');
+          whatsappLink.style.display = '';
+        } else {
+          whatsappLink.href = '#';
+          whatsappLink.classList.add('hidden');
+          whatsappLink.style.display = 'none';
+        }
+      }
+
+      modal.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+      this.refreshIcons();
     },
 
     // =========================================================================
@@ -1390,14 +1488,17 @@
   // Expose global prototype controller aliases for seamless backward compatibility
   window.RouterController = window.RouterController || {
     navigate: function (route) {
+      const home = (window.kinboniCoreData && kinboniCoreData.home_url) || '/';
       if (route === 'home') {
-        window.location.href = (window.kinboniCoreData && kinboniCoreData.home_url) || '/';
+        window.location.href = home;
       } else if (route === 'shop') {
         window.location.href = (window.kinboniCoreData && kinboniCoreData.shop_url) || '/shop/';
       } else if (route === 'checkout') {
-        window.location.href = (window.kinboniCoreData && kinboniCoreData.checkout_url) || '/checkout/';
+        const u = (window.kinboniCoreData && kinboniCoreData.checkout_url);
+        window.location.href = (u && u !== home) ? u : '/checkout/';
       } else if (route === 'cart') {
-        window.location.href = (window.kinboniCoreData && kinboniCoreData.cart_url) || '/cart/';
+        const u = (window.kinboniCoreData && kinboniCoreData.cart_url);
+        window.location.href = (u && u !== home) ? u : '/cart/';
       } else {
         window.location.href = '/' + route + '/';
       }
@@ -2495,7 +2596,7 @@
 
       return `
         <div class="kinboni-product-card group relative flex flex-col bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-2xl overflow-hidden shadow-sm hover:shadow-luxury dark:hover:shadow-luxury-dark hover:border-gold-500/40 dark:hover:border-gold-500/40 transition-all duration-500 cursor-pointer" data-product-id="${p.id}">
-          <div class="relative w-full aspect-[4/5] bg-stone-100 dark:bg-stone-950 overflow-hidden cursor-pointer" onclick="if (!event.target.closest('button, a')) window.location.href='${p.link}'">
+          <div class="relative w-full aspect-[4/5] bg-stone-100 dark:bg-stone-950 overflow-hidden cursor-pointer" onclick="if (!event.target.closest('button, a')) window.location.href=${JSON.stringify(p.link)}">
             <img src="${p.image}" alt="${Kinboni.esc(p.name)}" loading="lazy" class="w-full h-full object-cover object-center transition-all duration-700 ease-out group-hover:scale-105" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22500%22 viewBox=%220 0 400 500%22%3E%3Crect width=%22400%22 height=%22500%22 fill=%22%23e7e5e4%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23a8a29e%22 font-size=%2218%22%3ENo Image%3C/text%3E%3C/svg%3E';this.onerror=null;" />
             ${p.hoverImage && p.hoverImage !== p.image ? `<img src="${p.hoverImage}" alt="${Kinboni.esc(p.name)} alternate angle" loading="lazy" class="absolute inset-0 w-full h-full object-cover object-center opacity-0 transition-opacity duration-700 ease-out group-hover:opacity-100 group-hover:scale-105 pointer-events-none" />` : ''}
 
@@ -2531,7 +2632,7 @@
             </div>
 
             <h3 class="kinboni-product-card-title font-serif text-xl sm:text-2xl font-bold text-stone-900 dark:text-white leading-snug truncate mb-2 group-hover:text-gold-600 dark:group-hover:text-gold-400 transition-colors">
-              <a href="${p.link}">${Kinboni.esc(p.name)}</a>
+              <a href="${Kinboni.esc(p.link)}">${Kinboni.esc(p.name)}</a>
             </h3>
 
             <div class="flex items-baseline gap-2 mb-3">
@@ -2564,7 +2665,7 @@
         : '';
 
       return `
-        <div class="kinboni-product-list-card group flex flex-col sm:flex-row bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-2xl overflow-hidden shadow-sm hover:border-gold-500/40 transition-all duration-300 cursor-pointer" data-product-id="${p.id}" onclick="if (!event.target.closest('button, a')) window.location.href='${p.link}'">
+        <div class="kinboni-product-list-card group flex flex-col sm:flex-row bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-2xl overflow-hidden shadow-sm hover:border-gold-500/40 transition-all duration-300 cursor-pointer" data-product-id="${p.id}" onclick="if (!event.target.closest('button, a')) window.location.href=${JSON.stringify(p.link)}">
           <div class="relative w-full sm:w-60 aspect-[4/5] sm:aspect-auto bg-stone-100 dark:bg-stone-950 flex-shrink-0 overflow-hidden cursor-pointer">
             <img src="${p.image}" alt="${Kinboni.esc(p.name)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22500%22 viewBox=%220 0 400 500%22%3E%3Crect width=%22400%22 height=%22500%22 fill=%22%23e7e5e4%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23a8a29e%22 font-size=%2218%22%3ENo Image%3C/text%3E%3C/svg%3E';this.onerror=null;" />
             ${p.badge ? `<span class="absolute top-3 left-3 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full bg-stone-950/90 text-white">${Kinboni.esc(p.badge)}</span>` : ''}
@@ -2572,14 +2673,6 @@
               <button type="button" class="btn-toggle-wishlist w-9 h-9 rounded-full bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border border-stone-200/80 dark:border-stone-700/80 flex items-center justify-center text-stone-700 dark:text-stone-200 hover:text-rose-500 hover:border-rose-400 dark:hover:border-rose-400 hover:scale-110 active:scale-90 transition-all shadow-md group/heart cursor-pointer ${isWishlisted ? 'active text-rose-500' : ''}" data-product-id="${p.id}" aria-label="Save to Wishlist">
                 <svg class="w-4 h-4 transition-transform group-hover/heart:scale-110 ${isWishlisted ? 'fill-rose-500 text-rose-500 stroke-rose-500' : ''}" viewBox="0 0 24 24" fill="${isWishlisted ? '#f43f5e' : 'none'}" stroke="${isWishlisted ? '#f43f5e' : 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </button>
-              <button type="button" class="btn-open-quickview w-9 h-9 rounded-full bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border border-stone-200/80 dark:border-stone-700/80 flex items-center justify-center text-stone-700 dark:text-stone-200 hover:bg-gold-400 hover:text-stone-950 transition-all shadow-md cursor-pointer" data-product-id="${p.id}">
-                <i data-lucide="eye" class="w-4 h-4"></i>
-              </button>
-            </div>
-          </div>
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
               </button>
               <button type="button" class="btn-open-quickview w-9 h-9 rounded-full bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border border-stone-200/80 dark:border-stone-700/80 flex items-center justify-center text-stone-700 dark:text-stone-200 hover:bg-gold-400 hover:text-stone-950 transition-all shadow-md cursor-pointer" data-product-id="${p.id}">
@@ -2601,7 +2694,7 @@
                 </div>` : ''}
               </div>
               <h3 class="font-serif text-xl sm:text-2xl font-medium text-stone-900 dark:text-white mb-2 group-hover:text-gold-600 transition-colors">
-                <a href="${p.link}">${Kinboni.esc(p.name)}</a>
+                <a href="${Kinboni.esc(p.link)}">${Kinboni.esc(p.name)}</a>
               </h3>
               <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-4 font-normal line-clamp-2">${Kinboni.esc(p.description)}</p>
               ${specsHtml ? `<div class="flex flex-wrap gap-1.5 mb-4">${specsHtml}</div>` : ''}
@@ -2993,17 +3086,21 @@
     renderTotals() {
       if (!this.cartData) return;
       const d = this.cartData;
-      const subtotal = d.subtotal || 0;
+      const lineSubtotal = Array.isArray(d.items)
+        ? d.items.reduce((sum, item) => sum + this.amountFromFormatted(item.subtotal_formatted), 0)
+        : 0;
+      const formattedSubtotal = this.amountFromFormatted(d.subtotal_formatted);
+      const subtotal = formattedSubtotal > 0 ? formattedSubtotal : (lineSubtotal > 0 ? lineSubtotal : (d.subtotal || 0));
       const discount = d.discount || 0;
-      const threshold = d.threshold || (window.kinboniCoreData && kinboniCoreData.free_shipping_threshold) || 2500;
-      const feeInside = d.fee_inside || (window.kinboniCoreData && kinboniCoreData.fee_inside_dhaka) || 60;
-      const feeOutside = d.fee_outside || (window.kinboniCoreData && kinboniCoreData.fee_outside_dhaka) || 120;
+      const threshold = Number(d.threshold || (window.kinboniCoreData && kinboniCoreData.free_shipping_threshold) || 2500);
+      const feeInside = Number(d.fee_inside || (window.kinboniCoreData && kinboniCoreData.fee_inside_dhaka) || 60);
+      const feeOutside = Number(d.fee_outside || (window.kinboniCoreData && kinboniCoreData.fee_outside_dhaka) || 120);
 
       const isFree = subtotal >= threshold;
       const shippingFee = isFree ? 0 : (this.zone === 'outside' ? feeOutside : feeInside);
       const finalTotal = Math.max(0, subtotal - discount + shippingFee);
 
-      const sym = d.currency_symbol || (window.kinboniCoreData && kinboniCoreData.currency_symbol) || '৳';
+          const sym = Kinboni.currencySymbol(d.currency_symbol || (window.kinboniCoreData && kinboniCoreData.currency_symbol));
 
       const subtotalEl = document.getElementById('cart-page-subtotal');
       if (subtotalEl) subtotalEl.innerHTML = d.subtotal_formatted || `${sym}${Number(subtotal).toLocaleString()}`;
@@ -3061,7 +3158,7 @@
         const shippingText = document.getElementById('cart-page-shipping-text');
         if (shippingBar) shippingBar.style.width = '0%';
         if (shippingText) {
-          const sym = d.currency_symbol || '৳';
+          const sym = Kinboni.currencySymbol(d.currency_symbol);
           shippingText.innerHTML = `Add <strong>${sym}${Number(d.threshold || 2500).toLocaleString()}</strong> more to unlock Complimentary White-Glove Express Shipping`;
         }
         if (window.lucide && typeof window.lucide.createIcons === 'function') {
@@ -3187,7 +3284,41 @@
       if (!container) return;
 
       this.bindEvents(container);
+      this.installTotalObserver();
       this.fetchAndUpdate();
+    },
+
+    installTotalObserver() {
+      const totalEl = document.getElementById('wc-checkout-total');
+      if (!totalEl) return;
+      if (this.totalObserver) this.totalObserver.disconnect();
+      if (typeof MutationObserver !== 'undefined') {
+        this.totalObserver = new MutationObserver(() => this.syncVisibleTotal());
+        this.totalObserver.observe(totalEl, { childList: true, subtree: true, characterData: true });
+      }
+    },
+
+    syncVisibleTotal() {
+      const itemsContainer = document.getElementById('wc-checkout-order-items');
+      const totalEl = document.getElementById('wc-checkout-total');
+      if (!itemsContainer || !totalEl) return;
+      const parseVisibleAmount = (value) => {
+        const match = String(value || '').replace(/\u00a0/g, ' ').match(/-?[\d,]+(?:\.\d+)?/);
+        return match ? Number(match[0].replace(/,/g, '')) : 0;
+      };
+      const subtotal = Array.from(itemsContainer.querySelectorAll('span.font-bold'))
+        .reduce((sum, element) => sum + parseVisibleAmount(element.textContent), 0);
+      if (!(subtotal > 0)) return;
+      const d = this.cartData || {};
+      const threshold = Number(d.threshold || (window.kinboniCoreData && kinboniCoreData.free_shipping_threshold) || 2500);
+      const feeInside = Number(d.fee_inside || (window.kinboniCoreData && kinboniCoreData.fee_inside_dhaka) || 70);
+      const feeOutside = Number(d.fee_outside || (window.kinboniCoreData && kinboniCoreData.fee_outside_dhaka) || 130);
+      const shipping = subtotal >= threshold ? 0 : (this.zone === 'outside' ? feeOutside : feeInside);
+      const discount = Number(d.discount || 0);
+      const total = Math.max(0, subtotal - discount + shipping);
+      const sym = Kinboni.currencySymbol(d.currency_symbol || (window.kinboniCoreData && kinboniCoreData.currency_symbol));
+      const expected = `${sym}${Number(total).toLocaleString()}`;
+      if ((totalEl.textContent || '').trim() !== expected.trim()) totalEl.textContent = expected;
     },
 
     bindEvents(container) {
@@ -3204,9 +3335,22 @@
         CheckoutPageController.togglePaymentFields($(this).val());
       });
 
+      $(document).off('input.checkoutTotals change.checkoutTotals', '#wc-billing-first-name, #wc-billing-last-name, #wc-billing-phone, #wc-billing-email, #wc-billing-postcode, #wc-billing-address, #wc-order-notes')
+        .on('input.checkoutTotals change.checkoutTotals', '#wc-billing-first-name, #wc-billing-last-name, #wc-billing-phone, #wc-billing-email, #wc-billing-postcode, #wc-billing-address, #wc-order-notes', () => {
+          this.syncVisibleTotal();
+          window.setTimeout(() => this.syncVisibleTotal(), 700);
+        });
+
       $(document.body).off('wc_fragments_refreshed.checkoutpage').on('wc_fragments_refreshed.checkoutpage', () => {
         this.fetchAndUpdate();
       });
+
+      $(document).off('click.checkoutCoupon', '#wc-checkout-remove-coupon')
+        .on('click.checkoutCoupon', '#wc-checkout-remove-coupon', () => {
+          const coupons = this.cartData && Array.isArray(this.cartData.coupons) ? this.cartData.coupons : [];
+          const code = coupons.length && coupons[0] ? coupons[0].code : '';
+          if (code) this.removeCoupon(code);
+        });
     },
 
     onCityChange(val) {
@@ -3250,6 +3394,36 @@
           } else {
             Kinboni.showToast(res.data.message || 'Invalid privilege voucher.', 'error');
           }
+        },
+        error: () => {
+          Kinboni.showToast('Unable to validate the voucher right now. Please try again.', 'error');
+        }
+      });
+    },
+
+    removeCoupon(code) {
+      const couponCode = String(code || '').trim();
+      if (!couponCode) return;
+
+      $.ajax({
+        url: kinboniCoreData.ajax_url,
+        type: 'POST',
+        data: {
+          action: 'kinboni_remove_coupon',
+          nonce: kinboniCoreData.nonce,
+          coupon_code: couponCode
+        },
+        success: (res) => {
+          if (res.success) {
+            Kinboni.showToast(res.data.message || 'Privilege voucher removed.', 'success');
+            this.fetchAndUpdate();
+            $(document.body).trigger('wc_fragment_refresh');
+          } else {
+            Kinboni.showToast(res.data.message || 'Could not remove voucher.', 'error');
+          }
+        },
+        error: () => {
+          Kinboni.showToast('Unable to remove the voucher right now. Please try again.', 'error');
         }
       });
     },
@@ -3313,16 +3487,27 @@
         </div>
       `).join('');
 
-      const subtotal = d.subtotal || 0;
+      const lineSubtotal = Array.isArray(d.items)
+        ? d.items.reduce((sum, item) => sum + Kinboni.amountFromFormatted(item.subtotal_formatted), 0)
+        : 0;
+      const parseVisibleAmount = (value) => {
+        const match = String(value || '').replace(/\u00a0/g, ' ').match(/-?[\d,]+(?:\.\d+)?/);
+        return match ? Number(match[0].replace(/,/g, '')) : 0;
+      };
+      const visibleLineSubtotal = Array.from(itemsContainer.querySelectorAll('span.font-bold'))
+        .reduce((sum, element) => sum + parseVisibleAmount(element.textContent), 0);
+      const displayedLineSubtotal = visibleLineSubtotal > 0 ? visibleLineSubtotal : lineSubtotal;
+      const formattedSubtotal = Kinboni.amountFromFormatted(d.subtotal_formatted);
+      const subtotal = displayedLineSubtotal > 0 ? displayedLineSubtotal : (formattedSubtotal > 0 ? formattedSubtotal : (d.subtotal || 0));
       const discount = d.discount || 0;
-      const threshold = d.threshold || (window.kinboniCoreData && kinboniCoreData.free_shipping_threshold) || 2500;
-      const feeInside = d.fee_inside || (window.kinboniCoreData && kinboniCoreData.fee_inside_dhaka) || 60;
-      const feeOutside = d.fee_outside || (window.kinboniCoreData && kinboniCoreData.fee_outside_dhaka) || 120;
+      const threshold = Number(d.threshold || (window.kinboniCoreData && kinboniCoreData.free_shipping_threshold) || 2500);
+      const feeInside = Number(d.fee_inside || (window.kinboniCoreData && kinboniCoreData.fee_inside_dhaka) || 60);
+      const feeOutside = Number(d.fee_outside || (window.kinboniCoreData && kinboniCoreData.fee_outside_dhaka) || 120);
 
       const isFree = subtotal >= threshold;
       const shippingFee = isFree ? 0 : (this.zone === 'outside' ? feeOutside : feeInside);
       const totalPayable = Math.max(0, subtotal - discount + shippingFee);
-      const sym = d.currency_symbol || (window.kinboniCoreData && kinboniCoreData.currency_symbol) || '৳';
+      const sym = Kinboni.currencySymbol(d.currency_symbol || (window.kinboniCoreData && kinboniCoreData.currency_symbol));
 
       if (subtotalEl) subtotalEl.innerHTML = d.subtotal_formatted || `${sym}${Number(subtotal).toLocaleString()}`;
 
@@ -3331,14 +3516,26 @@
           discountRow.classList.remove('hidden');
           discountRow.classList.add('flex');
           discountEl.innerHTML = `-${d.discount_formatted || (sym + Number(discount).toLocaleString())}`;
+          const removeCouponButton = document.getElementById('wc-checkout-remove-coupon');
+          const couponCode = d.coupons && d.coupons.length && d.coupons[0] ? d.coupons[0].code : '';
+          if (removeCouponButton) {
+            removeCouponButton.classList.toggle('hidden', !couponCode);
+            removeCouponButton.dataset.coupon = couponCode;
+          }
         } else {
           discountRow.classList.add('hidden');
           discountRow.classList.remove('flex');
+          const removeCouponButton = document.getElementById('wc-checkout-remove-coupon');
+          if (removeCouponButton) {
+            removeCouponButton.classList.add('hidden');
+            removeCouponButton.dataset.coupon = '';
+          }
         }
       }
 
       if (shippingEl) shippingEl.textContent = isFree ? 'Free (Complimentary)' : `${sym}${Number(shippingFee).toLocaleString()}`;
       if (totalEl) totalEl.textContent = `${sym}${Number(totalPayable).toLocaleString()}`;
+      this.syncVisibleTotal();
 
       if (window.lucide && typeof window.lucide.createIcons === 'function') {
         window.lucide.createIcons();
@@ -3349,7 +3546,9 @@
     },
 
     submitOrder() {
-      if (!this.cartData || !this.cartData.items || this.cartData.items.length === 0) {
+      if (this.isSubmitting) return;
+      const hasPageItems = document.querySelectorAll('#wc-checkout-order-items .py-3').length > 0;
+      if ((!this.cartData || !this.cartData.items || this.cartData.items.length === 0) && !hasPageItems) {
         Kinboni.showToast('Your shopping bag is empty! Please add a creation first.', 'error');
         return;
       }
@@ -3389,6 +3588,8 @@
       }
 
       if (errEl) errEl.classList.add('hidden');
+
+      this.isSubmitting = true;
 
       const submitBtn = document.getElementById('wc-place-order-btn');
       const originalBtnText = submitBtn ? submitBtn.innerHTML : '';
@@ -3443,6 +3644,12 @@
               currency: (window.kinboniCoreData && kinboniCoreData.currency_code) || 'BDT'
             });
             Kinboni.showToast(data.message || `Order ${data.order_number} confirmed!`, 'success');
+
+            // Beautiful Order Complete Confirmation Popup
+            if (window.Kinboni && typeof window.Kinboni.showOrderSuccessModal === 'function') {
+              window.Kinboni.showOrderSuccessModal(data);
+            }
+
             $(document.body).trigger('wc_fragment_refresh');
             window.scrollTo({ top: 0, behavior: 'smooth' });
           } else {
@@ -3461,6 +3668,7 @@
           Kinboni.showToast('Network error while placing order.', 'error');
         },
         complete: () => {
+          this.isSubmitting = false;
           if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalBtnText;
@@ -3963,12 +4171,15 @@
 
   // Live Guest Contact Capture for Abandoned Cart Recovery
   let guestCaptureTimer = null;
-  $(document).on('change blur', '#wc-billing-phone, #wc-billing-email, #wc-billing-first-name, #order-customer-phone, #order-customer-name', function () {
+  // Full checkout owns its own submit flow; capturing every field change here
+  // can trigger WooCommerce cart recalculation while the form is being filled.
+  // Keep live guest capture for the compact quick-order modal only.
+  $(document).on('change blur', '#order-customer-phone, #order-customer-name', function () {
     clearTimeout(guestCaptureTimer);
     guestCaptureTimer = setTimeout(function () {
-      const phone = ($('#wc-billing-phone').val() || $('#order-customer-phone').val() || '').trim();
-      const email = ($('#wc-billing-email').val() || '').trim();
-      const firstName = ($('#wc-billing-first-name').val() || $('#order-customer-name').val() || '').trim();
+       const phone = ($('#order-customer-phone').val() || '').trim();
+       const email = '';
+       const firstName = ($('#order-customer-name').val() || '').trim();
       const lastName = ($('#wc-billing-last-name').val() || '').trim();
       const name = (firstName + ' ' + lastName).trim();
       if ((phone.length >= 11 || email.indexOf('@') > 0) && window.kinboniCoreData && kinboniCoreData.ajax_url) {

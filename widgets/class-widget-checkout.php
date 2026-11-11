@@ -423,6 +423,22 @@ class Kinboni_Widget_Checkout extends Widget_Base {
 
         // Retrieve WooCommerce Cart data
         $cart = (function_exists('WC') && WC()->cart) ? WC()->cart : null;
+        if ($cart) {
+            foreach ($cart->get_cart() as $cart_item) {
+                $cart_product = isset($cart_item['data']) ? $cart_item['data'] : null;
+                if (!$cart_product || !method_exists($cart_product, 'get_price')) {
+                    continue;
+                }
+                $raw_price = (float) $cart_product->get_price('edit');
+                $display_text = html_entity_decode(wp_strip_all_tags(wc_price($raw_price)), ENT_QUOTES, 'UTF-8');
+                $display_text = preg_replace('/[^0-9.,-]/u', '', $display_text);
+                $display_price = (float) str_replace(',', '', $display_text);
+                if ($raw_price > 0 && $display_price > 0 && abs($raw_price - ($display_price * 100)) < 0.0001) {
+                    $cart_product->set_price($display_price);
+                }
+            }
+            $cart->calculate_totals();
+        }
         $is_empty = (!$cart || $cart->is_empty());
         $subtotal_raw = $cart ? (float)$cart->get_subtotal() : 0;
         $discount_raw = $cart ? (float)$cart->get_discount_total() : 0;
@@ -440,7 +456,12 @@ class Kinboni_Widget_Checkout extends Widget_Base {
                     $img_id = $p->get_image_id();
                     $img_url = $img_id ? wp_get_attachment_image_url($img_id, 'thumbnail') : wc_placeholder_img_src();
                     $price_raw = (float)$p->get_price();
-                    $line_total = $price_raw * $item['quantity'];
+                    // Use the same display value customers see. Some currency
+                    // formatters scale raw product prices during recalculation.
+                    $price_display_text = html_entity_decode(wp_strip_all_tags(wc_price($price_raw)), ENT_QUOTES, 'UTF-8');
+                    $price_display_text = preg_replace('/[^0-9.,-]/u', '', $price_display_text);
+                    $price_display = (float) str_replace(',', '', $price_display_text);
+                    $line_total = ($price_display > 0 ? $price_display : $price_raw) * $item['quantity'];
 
                     $cart_items[] = array(
                         'id'         => $pid,
@@ -454,6 +475,21 @@ class Kinboni_Widget_Checkout extends Widget_Base {
                 }
             }
         }
+
+        // Keep the first render consistent with the item prices shown below.
+        // A totals recalculation can leave WooCommerce's raw subtotal in minor
+        // units while product prices remain in major units (e.g. 1600 vs 16).
+        if (!empty($cart_items)) {
+            $line_subtotal = array_sum(array_map(static function ($item) {
+                return isset($item['line_total']) ? (float) $item['line_total'] : 0.0;
+            }, $cart_items));
+            if ($line_subtotal > 0 && abs($subtotal_raw - $line_subtotal) > 0.0001) {
+                $subtotal_raw = $line_subtotal;
+            }
+        }
+        $is_free_shipping = ($threshold > 0 && $subtotal_raw >= $threshold);
+        $initial_shipping_fee = $is_free_shipping ? 0 : (float) (class_exists('Kinboni_Content') ? Kinboni_Content::get('delivery_fee_inside', 70) : get_option('kinboni_delivery_fee_inside', 70));
+        $initial_total_raw = max(0, $subtotal_raw - $discount_raw + $initial_shipping_fee);
         ?>
         <main id="page-view-checkout" class="wc-page-view relative overflow-hidden py-8 sm:py-12 min-h-[75vh]">
             
@@ -511,7 +547,7 @@ class Kinboni_Widget_Checkout extends Widget_Base {
                 </div>
                 <?php endif; ?>
 
-                <form id="wc-full-checkout-form" class="checkout woocommerce-checkout grid grid-cols-1 lg:grid-cols-12 gap-8 items-start" novalidate>
+                <form id="wc-full-checkout-form" class="kinboni-checkout-form grid grid-cols-1 lg:grid-cols-12 gap-8 items-start" novalidate>
                   <div style="position:absolute;left:-9999px;top:-9999px;height:0;width:0;overflow:hidden;" aria-hidden="true"><input type="text" name="kinboni_hp" value="" tabindex="-1" autocomplete="off"></div>
                   
                   <div class="lg:col-span-7 bg-white/95 dark:bg-stone-900/90 backdrop-blur-md rounded-3xl border border-stone-200/80 dark:border-stone-800 p-6 sm:p-8 shadow-sm space-y-6">
@@ -619,7 +655,10 @@ class Kinboni_Widget_Checkout extends Widget_Base {
                         <span id="wc-checkout-subtotal" class="font-bold text-stone-900 dark:text-white"><?php echo wp_kses_post(wc_price($subtotal_raw)); ?></span>
                       </div>
                       <div id="wc-checkout-discount-row" class="<?php echo ($discount_raw > 0) ? 'flex' : 'hidden'; ?> justify-between text-emerald-600 dark:text-emerald-400 font-bold">
-                        <span><?php esc_html_e('Privilege Voucher', 'kinboni-core'); ?></span>
+                        <span class="flex items-center gap-2">
+                          <span><?php esc_html_e('Privilege Voucher', 'kinboni-core'); ?></span>
+                          <button type="button" id="wc-checkout-remove-coupon" class="hidden text-[10px] uppercase tracking-wider text-stone-500 hover:text-rose-500" aria-label="Remove coupon">Remove</button>
+                        </span>
                         <span id="wc-checkout-discount">-<?php echo wp_kses_post(wc_price($discount_raw)); ?></span>
                       </div>
                       <div class="flex justify-between text-stone-600 dark:text-stone-400">
