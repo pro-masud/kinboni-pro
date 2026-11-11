@@ -31,8 +31,11 @@
 
     const origSuccess = options.success;
     const origError = options.error;
+    const origComplete = options.complete;
+    let retryingNonce = false;
 
     const retryWithFreshNonce = function (xhr) {
+      retryingNonce = true;
       origAjax.call($, {
         url: (window.kinboniCoreData && kinboniCoreData.ajax_url) || '/wp-admin/admin-ajax.php',
         type: 'POST',
@@ -47,6 +50,7 @@
             retryOpts._kinboniRetried = true;
             retryOpts.success = origSuccess;
             retryOpts.error = origError;
+            retryOpts.complete = origComplete;
 
             if (typeof FormData !== 'undefined' && retryOpts.data instanceof FormData) {
               retryOpts.data.set('nonce', newNonce);
@@ -58,10 +62,12 @@
             origAjax.call($, url, retryOpts);
           } else {
             if (origError) origError.call(this, xhr, 'error', 'Nonce refresh failed');
+            if (origComplete) origComplete.call(this, xhr, 'error');
           }
         },
         error: function () {
           if (origError) origError.call(this, xhr, 'error', 'Nonce refresh failed');
+          if (origComplete) origComplete.call(this, xhr, 'error');
         }
       });
     };
@@ -81,6 +87,11 @@
         return;
       }
       if (origError) origError.apply(this, arguments);
+    };
+
+    options.complete = function () {
+      if (retryingNonce) return;
+      if (origComplete) origComplete.apply(this, arguments);
     };
 
     return origAjax.call($, url, options);
@@ -121,6 +132,7 @@
 
     state: {
       currentOrderProduct: null,
+      isSubmittingQuickOrder: false,
       deliveryZone: 'inside', // 'inside' = 70, 'outside' = 130
       shippingFee: 70,
       subtotal: 0,
@@ -667,6 +679,8 @@
     },
 
     submitQuickOrder() {
+      if (this.state.isSubmittingQuickOrder) return;
+
       const nameInput = document.getElementById('order-customer-name');
       const phoneInput = document.getElementById('order-customer-phone');
       const addressInput = document.getElementById('order-customer-address');
@@ -685,13 +699,19 @@
         }
       }
 
+      // Normalize optional +88/88 prefix to match backend BD mobile validation
+      let cleanPhone = phone.replace(/[^0-9]/g, '');
+      if (cleanPhone.length === 13 && cleanPhone.startsWith('88')) {
+        cleanPhone = cleanPhone.slice(2);
+      }
+
       // Validate
       if (!name) {
         this.showToast('অনুগ্রহ করে আপনার নাম দিন।', 'error');
         if (nameInput) nameInput.focus();
         return;
       }
-      if (!phone || !/^01[3-9]\d{8}$/.test(phone.replace(/[^0-9]/g, ''))) {
+      if (!cleanPhone || !/^01[3-9]\d{8}$/.test(cleanPhone)) {
         this.showToast('সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: 01711000000)।', 'error');
         if (phoneInput) phoneInput.focus();
         return;
@@ -703,6 +723,7 @@
       }
 
       // Submit
+      this.state.isSubmittingQuickOrder = true;
       if (submitBtn) submitBtn.disabled = true;
       if (btnText) btnText.innerHTML = '<span class="flex items-center justify-center gap-2"><i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>অর্ডার প্রক্রিয়া করা হচ্ছে...</span>';
       this.refreshIcons();
@@ -711,7 +732,7 @@
         action: 'kinboni_quick_order_submit',
         nonce: (window.kinboniCoreData && kinboniCoreData.nonce) || '',
         name: name,
-        phone: phone,
+        phone: cleanPhone,
         address: address,
         zone: this.state.deliveryZone,
         product_id: this.state.currentOrderProduct ? this.state.currentOrderProduct.id : 0,
@@ -723,11 +744,9 @@
       $.ajax({
         url: (window.kinboniCoreData && kinboniCoreData.ajax_url) || '/wp-admin/admin-ajax.php',
         type: 'POST',
+        timeout: 30000,
         data: data,
         success: (res) => {
-          if (submitBtn) submitBtn.disabled = false;
-          if (btnText) btnText.textContent = 'Confirm Order (Cash on Delivery)';
-
           if (res.success && res.data) {
             // Show Success View popup
             this.showOrderSuccessModal(res.data);
@@ -743,10 +762,16 @@
             this.showToast((res.data && res.data.message) || res.message || 'Error creating order.', 'error');
           }
         },
-        error: () => {
+        error: (_xhr, textStatus) => {
+          const msg = (textStatus === 'timeout')
+            ? 'সার্ভার থেকে উত্তর আসতে দেরি হচ্ছে। ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।'
+            : 'নেটওয়ার্ক বা সার্ভারে সমস্যা হয়েছে। অনুগ্রহ করে পুনরায় চেষ্টা করুন।';
+          this.showToast(msg, 'error');
+        },
+        complete: () => {
+          this.state.isSubmittingQuickOrder = false;
           if (submitBtn) submitBtn.disabled = false;
           if (btnText) btnText.textContent = 'Confirm Order (Cash on Delivery)';
-          this.showToast('সার্ভারে সমস্যা হয়েছে। পুনরায় চেষ্টা করুন।', 'error');
         }
       });
     },
@@ -1019,6 +1044,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_get_live_sales',
           nonce: kinboniCoreData.nonce
@@ -1270,6 +1296,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_get_wishlist_items',
           nonce: kinboniCoreData.nonce,
@@ -1318,6 +1345,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_move_all_wishlist_to_bag',
           nonce: kinboniCoreData.nonce,
@@ -1393,6 +1421,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_get_wishlist_items',
           nonce: kinboniCoreData.nonce,
@@ -2272,6 +2301,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_submit_review',
           nonce: kinboniCoreData.nonce,
@@ -2965,6 +2995,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_update_cart_qty',
           nonce: kinboniCoreData.nonce,
@@ -2982,6 +3013,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_remove_cart_item',
           nonce: kinboniCoreData.nonce,
@@ -2999,6 +3031,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_clear_cart',
           nonce: kinboniCoreData.nonce
@@ -3015,6 +3048,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_apply_coupon',
           nonce: kinboniCoreData.nonce,
@@ -3036,6 +3070,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_remove_coupon',
           nonce: kinboniCoreData.nonce,
@@ -3053,6 +3088,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_get_cart_data',
           nonce: kinboniCoreData.nonce
@@ -3380,6 +3416,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_apply_coupon',
           nonce: kinboniCoreData.nonce,
@@ -3408,6 +3445,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_remove_coupon',
           nonce: kinboniCoreData.nonce,
@@ -3432,6 +3470,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_get_cart_data',
           nonce: kinboniCoreData.nonce
@@ -3604,6 +3643,7 @@
       $.ajax({
         url: kinboniCoreData.ajax_url,
         type: 'POST',
+        timeout: 30000,
         data: {
           action: 'kinboni_checkout_submit',
           nonce: kinboniCoreData.nonce,
@@ -3660,12 +3700,15 @@
             Kinboni.showToast((res.data && res.data.message) || 'Error placing order.', 'error');
           }
         },
-        error: () => {
+        error: (_xhr, textStatus) => {
+          const msg = (textStatus === 'timeout')
+            ? 'Request timed out while securing your order. Please check your connection and try again.'
+            : 'Server communication error. Please try again.';
           if (errEl) {
-            errEl.textContent = 'Server communication error. Please try again.';
+            errEl.textContent = msg;
             errEl.classList.remove('hidden');
           }
-          Kinboni.showToast('Network error while placing order.', 'error');
+          Kinboni.showToast(msg, 'error');
         },
         complete: () => {
           this.isSubmitting = false;

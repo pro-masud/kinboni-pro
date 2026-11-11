@@ -286,7 +286,7 @@ class Kinboni_Admin_Orders {
         }
 
         $order = wc_get_order($order_id);
-        if (!$order) {
+        if (!$order || !is_a($order, 'WC_Order') || is_a($order, 'WC_Order_Refund')) {
             wp_send_json_error(array('message' => esc_html__('Order not found.', 'kinboni-core')));
         }
 
@@ -295,6 +295,13 @@ class Kinboni_Admin_Orders {
             esc_html__('Status updated via KINBONI Pro Admin by %s', 'kinboni-core'),
             wp_get_current_user()->display_name
         ));
+
+        // WooCommerce restores stock automatically on cancelled/pending/failed,
+        // but direct status transitions to 'refunded' do not create a refund
+        // object; restore reduced stock safely when transitioning to refunded.
+        if ($new_status === 'refunded' && function_exists('wc_maybe_increase_stock_levels')) {
+            wc_maybe_increase_stock_levels($order->get_id());
+        }
 
         // Log Activity
         if (class_exists('Kinboni_Activity_Logger')) {
@@ -331,7 +338,7 @@ class Kinboni_Admin_Orders {
         }
 
         $order = wc_get_order($order_id);
-        if (!$order) {
+        if (!$order || !is_a($order, 'WC_Order') || is_a($order, 'WC_Order_Refund')) {
             wp_send_json_error(array('message' => esc_html__('Order not found.', 'kinboni-core')));
         }
 
@@ -419,11 +426,14 @@ class Kinboni_Admin_Orders {
 
             foreach ($order_ids as $id) {
                 $order = wc_get_order($id);
-                if ($order) {
+                if ($order && is_a($order, 'WC_Order') && !is_a($order, 'WC_Order_Refund')) {
                     $order->update_status($new_status, sprintf(
                         esc_html__('Bulk status update via KINBONI Pro Admin by %s', 'kinboni-core'),
                         wp_get_current_user()->display_name
                     ));
+                    if ($new_status === 'refunded' && function_exists('wc_maybe_increase_stock_levels')) {
+                        wc_maybe_increase_stock_levels($order->get_id());
+                    }
                     $updated_count++;
                 }
             }
@@ -747,7 +757,7 @@ class Kinboni_Admin_Orders {
      */
     public function render_printable_document($order_id, $type = 'invoice') {
         $order = wc_get_order($order_id);
-        if (!$order) {
+        if (!$order || !is_a($order, 'WC_Order') || is_a($order, 'WC_Order_Refund')) {
             wp_die(esc_html__('Order not found.', 'kinboni-core'));
         }
 

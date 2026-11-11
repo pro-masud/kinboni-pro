@@ -412,7 +412,7 @@ class Kinboni_Admin_Products {
         }
 
         $product_id = isset($_POST['product_id']) ? absint(wp_unslash($_POST['product_id'])) : 0;
-        $stock_qty  = isset($_POST['stock_qty']) ? absint(wp_unslash($_POST['stock_qty'])) : 0;
+        $stock_qty  = isset($_POST['stock_qty']) ? max(0, intval(wp_unslash($_POST['stock_qty']))) : 0;
         $stock_st   = isset($_POST['stock_status']) ? sanitize_key(wp_unslash($_POST['stock_status'])) : '';
 
         $product = wc_get_product($product_id);
